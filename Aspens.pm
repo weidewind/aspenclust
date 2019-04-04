@@ -5,7 +5,7 @@ package Aspens;
 use strict;
 use Bio::Phylo::IO;
 use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
-
+use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance);
 use Bio::Tools::CodonTable;
 use TreeUtils::Phylo::FigTree;
 use Bio::SeqIO;
@@ -51,7 +51,8 @@ sub logic_global_median_statistics{
 
 	foreach my $ind(@array){
 			print OUT $ind."\n";
-			my %distr = find_all_distances($mutmap, $ind);
+			my %distr = find_all_distances_probs($mutmap, $ind);
+			print (Dumper(\%distr));
 			my @site_bins = distr_to_stathist(\%distr, $step);
 			
 			if (defined $site_bins[0]->[1] && defined $site_bins[1]->[1]){
@@ -92,7 +93,7 @@ sub logic_global_median_statistics{
 	    print "shuffling $t\n";
 		my @shuffler_bins;
 		for (my $ind = 1; $ind <566; $ind++){
-			my %shuffled_distr = find_all_distances($mutmap, $ind, "shuffle");
+			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
 			my @shuffler_site_bins = distr_to_stathist(\%shuffled_distr, $step);
 				if (defined $shuffler_site_bins[0]->[1] && defined $shuffler_site_bins[1]->[1]){
 
@@ -138,7 +139,7 @@ sub logic_median_statistics {
 	my $iterate = shift;
 	my $sites = shift;
 	
-	unless ($sites) $sites = [1..566];
+	$sites = [1..566] unless ($sites) ;
 	
 	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
@@ -153,10 +154,10 @@ sub logic_median_statistics {
 		next unless ($nodes_with_sub{$ind});
 		my @bootstrap_median_diff;
 		print OUT ">debug site $ind \n";
-		my %distr = find_all_distances($mutmap, $ind);
+		my %distr = find_all_distances_probs($mutmap, $ind);
 		print OUT "key\tsame_count\tdiff_count\n";
 		foreach my $k (keys %distr){
-			print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n";
+			print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n"; # distr{$anc$der$num}[2] = (same, diff)
 		}
 		my @bins = distr_to_stathist(\%distr, $step);
 		my $same_median = hist_median(\@{$bins[0]});
@@ -169,7 +170,7 @@ sub logic_median_statistics {
 		print OUT $obs_difference."\t";
 		
 		for (my $t = 0; $t < $iterate; $t++){
-			my %shuffled_distr = find_all_distances($mutmap, $ind, "shuffle");
+			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
 			my @shuffler_bins = distr_to_stathist(\%shuffled_distr, $step);
 			push @bootstrap_median_diff, hist_median(\@{$shuffler_bins[1]})-hist_median(\@{$shuffler_bins[0]});
 		}
@@ -191,7 +192,8 @@ sub logic_median_statistics {
 	close OUT;
 }
 
-# for each interval prints two numbers (for each substitution, i.e. same ancestor and same derived aa or codon): observed number of convergent mutations and expected from the of divergent mutations in this interval
+# for each interval prints two numbers (for each substitution, i.e. same ancestor and same derived aa or codon): observed number of convergent mutations 
+# and expected from the of divergent mutations in this interval
 # each subst (a, d) is analyzed separately
 # counts each pair only once
 
@@ -208,7 +210,8 @@ sub logic_medstat_groups_labelshuffler {
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
 	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
 
-	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_labelshuffler_".$groupname);	
+	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, 
+$mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_labelshuffler_".$groupname);	
 	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 
 
@@ -296,7 +299,8 @@ print OUT "site\tsame_median\tdiff_median\tmedian_difference\tpvalue\n";
 			}
 		}
 		my $bootstrap_difference_group = hist_median_group(\@{$shuffler_bins[1]}, \@group)-hist_median_group(\@{$shuffler_bins[0]}, \@group);
-		my $bootstrap_difference_complement = hist_median_group(\@{$shuffler_bins[1]}, \@complement)-hist_median_group(\@{$shuffler_bins[0]}, \@complement);	
+		my $bootstrap_difference_complement = hist_median_group(\@{$shuffler_bins[1]}, \@complement)-hist_median_group(\@{$shuffler_bins[0]}, 
+\@complement);	
 		if ($bootstrap_difference_group >= $obs_difference_group){
 			$group_count++;
 		}
@@ -451,10 +455,11 @@ sub find_all_distances {
 	my %hash_of_nodes;
 	#split the array of nodes by the ancestor codon 
 	foreach my $node (@nodes){
-		my $ancestor = ${$subs_on_node{${$node}->get_name()}}{$site_index}->{"Substitution::ancestral_allele"};
+		my $ancestor = ${$subs_on_node{${$node}->get_name()}}{$site_index}->{"Substitution::ancestral_allele"}; #todo to array of subst
 		push @{$hash_of_nodes{$ancestor}}, $node;
 	}
-#print Dumper(\%hash_of_nodes);
+print ("site $site_index\n");
+print Dumper(\%hash_of_nodes);
 	foreach my $ancestor (keys %hash_of_nodes){
 		my @nodes_subset = @{$hash_of_nodes{$ancestor}};
 		my @shuffled;
@@ -494,7 +499,7 @@ sub find_all_distances {
 				}
 #print "node 2:   $ancestor $derived2 \n";
 			#	my $dist = calc_my_distance(${$shuffled[$i]}, ${$shuffled[$j]});
-			    my $dist = $mutmap->node_distance(${$shuffled[$i]}, ${$shuffled[$j]}); #!
+			    my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
 			   # my $dist =  calc_true_patristic_distance(${$shuffled[$i]}, ${$shuffled[$j]});
 #print " dist $dist\n";
 				if ($dist > 0){ # ie these nodes are not sequential; does not work since 02 06 2015
@@ -513,7 +518,7 @@ sub find_all_distances {
 					}
 				}
 				else {
-					print "Panic! Distance between ".${$shuffled[$i]}->get_name." and ".${$shuffled[$j]}->get_name." is $dist \n";
+					#print "Panic! Distance between ".${$shuffled[$i]}->get_name." and ".${$shuffled[$j]}->get_name." is $dist \n";
 				}
 
 		}
@@ -527,6 +532,120 @@ sub find_all_distances {
 
 	return %hash;		
 }
+
+#$hash{"$ancestor$derived1$i"}->[0]  =  ($samedists)
+#$hash{"$ancestor$derived1$i"}->[1]  =  ($diffdists)
+#$hash{"$ancestor$derived1$i"}->[2] = ($samecount, $diffcount)
+
+sub find_all_distances_probs {
+	my $mutmap = shift;
+	my $site_index = shift;
+	my $shuffle = shift;
+	my $tree = $mutmap->{static_tree};
+	my $state = $mutmap->{static_state};
+	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
+	my %hash;
+	return %hash unless ($mutmap->{static_nodes_with_sub}{$site_index});
+	my @nodes = @{$mutmap->{static_nodes_with_sub}{$site_index}};
+	
+	my @distances_same;
+	my @distances_diff;
+	my $myCodonTable   = Bio::Tools::CodonTable->new();
+	my %hash_of_nodes;
+	# collect nodes with substitutions from a certain allele
+print Dumper(\@nodes);
+	foreach my $node (@nodes){
+		foreach my $sub(@{$subs_on_node{${$node}->get_name()}->{$site_index}}){
+				my $ancestor = $sub->{"Substitution::ancestral_allele"}; 
+print ${$node}->get_name()." ".$ancestor."\n";
+				$hash_of_nodes{$ancestor}{${$node}->get_name()} = $node;
+			}
+	}
+print ("site $site_index\n");	
+# print Dumper(\%hash_of_nodes);
+	foreach my $ancestor (keys %hash_of_nodes){
+print $ancestor."\n";	
+		my @nodes_subset =  values %{$hash_of_nodes{$ancestor}};
+		my @shuffled;
+		if ($shuffle) {@shuffled = shuffle @nodes_subset;}
+		else {@shuffled = @nodes_subset;}
+		for (my $i = 0; $i < scalar @nodes_subset; $i++){
+print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
+print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
+			foreach my $sub1 (@{$subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}}){
+					next if $sub1->{"Substitution::ancestral_allele"} ne $ancestor; 
+					my $derived1;
+					my $weight1 = $sub1->{"Substitution::probability"};
+					if ($state eq "nsyn"){
+						$derived1 = $myCodonTable -> translate($sub1->{"Substitution::derived_allele"});
+					}
+					elsif ($state eq "syn"){
+						$derived1 = ($sub1->{"Substitution::derived_allele"});
+					}
+					else {
+						die "wrong argument in sub shuffler; only syn or nsyn accepted as the 6th arg";
+					}
+					my $count_same = $weight1*$weight1; # to add the node1 itself
+					my $count_diff;
+print "node 1:  $ancestor $derived1 \n" unless $shuffle;
+					for (my $j = 0; $j < scalar @nodes_subset; $j++){
+						if ($j == $i){ next; }
+					#	if (value_is_in_array(${$shuffled[$j]}, \@{ ${$shuffled[$i]}->get_sisters })){ #!
+					#		next; 
+					#	}
+							foreach my $sub2 (@{$subs_on_node{${$nodes_subset[$j]}->get_name()}{$site_index}}){
+								next if $sub2->{"Substitution::ancestral_allele"} ne $ancestor;
+								my $weight2 = $sub2->{"Substitution::probability"};
+								my $derived2;
+								if ($state eq "nsyn"){
+									$derived2 = $myCodonTable -> translate($sub2->{"Substitution::derived_allele"});
+								}
+								elsif ($state eq "syn"){
+									$derived2 = ($sub2->{"Substitution::derived_allele"});
+								}
+								else {
+									die "wrong argument in sub shuffler; only syn or nsyn accepted as the 6th arg";
+								}
+
+							#	my $dist = calc_my_distance(${$shuffled[$i]}, ${$shuffled[$j]});
+								my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
+							   # my $dist =  calc_true_patristic_distance(${$shuffled[$i]}, ${$shuffled[$j]});
+print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist\n" unless $shuffle;
+								if ($dist > 0){ # ie these nodes are not sequential; does not work since 02 06 2015
+									if (!exists $hash{"$ancestor$derived1$i"} ){
+										my @same = ();
+										my @diff = ();
+										$hash{"$ancestor$derived1$i"} = (\@same, \@diff);
+									}
+									if ($derived1 eq $derived2){
+										push @{ ($hash{"$ancestor$derived1$i"})->[0] }, $dist;
+										$count_same = $count_same+$weight1*$weight2;
+									}
+									else {
+										push @{ ($hash{"$ancestor$derived1$i"})->[1] }, $dist;
+										$count_diff = $count_diff+$weight1*$weight2;
+									}
+								}
+								else {
+									print "Panic! Distance between ".${$shuffled[$i]}->get_name." and ".${$shuffled[$j]}->get_name." is $dist \n";
+								}
+
+							}
+
+
+					}
+					 print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
+							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_same;
+							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_diff;
+
+		}
+
+	}
+	}
+
+	return %hash;		
+}
+
 
 
 ## careful! it does not ignore sequentials, if method is calc_true_patristic_distance instead og calc_my_distance
@@ -646,7 +765,7 @@ sub find_all_distances_except_seq_and_sis_radius_old {
 			if (defined $distr{$subst}->[0] && defined $distr{$subst}->[1]) {
 				my $same_size = $distr{$subst}->[2]->[0];
 				my $diff_size = $distr{$subst}->[2]->[1];
-				if ($same_size > 0 && $diff_size > 0){
+				if ($same_size > 1 && $diff_size > 0){
 					$pruned_distr{$subst} = $distr{$subst};
 					my $ancestor_derived = $subst =~ s/[0-9]//gr; 
 					$hash{$ancestor_derived} = 1;
