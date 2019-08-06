@@ -118,7 +118,7 @@ sub sub_probabilities{
 					my $ancaa = $myCodonTable->translate($anccod);
 					my $deraa = $myCodonTable->translate($dercod);
 					if ($ancaa ne $deraa){
-						$sub_probs{$anccod}{$dercod} = $sub_probs{$anccod}{$dercod}+$anc_probs{$anccod}*$der_probs{$dercod};
+						$sub_probs{$anccod}{$deraa} = $sub_probs{$anccod}{$deraa}+$anc_probs{$anccod}*$der_probs{$dercod};
 					}
 				}
 				else{

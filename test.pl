@@ -28,7 +28,7 @@ my $mutmap = ProbsMutmap->new($args);
 #Aspens::logic_global_median_statistics($mutmap, 0.00005, 5);
 # print(Dumper($mutmap->{static_subs_on_node}{"STRAIN709_1932"}));
 my @sites_subset = (2);
-Aspens::logic_median_statistics($mutmap, 0.00005, 1, \@sites_subset);
+Aspens::logic_median_statistics($mutmap, 0.00005, 100, \@sites_subset);
 
 
 
