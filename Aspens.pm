@@ -28,11 +28,138 @@ use File::Spec;
 $| = 1;
 
 
+sub print_colored_trees {
+	my $self = shift;
+	my @allsites = @{@_[0]};;
+	my $tag = $_[1];
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	my $state = $self->{static_state};
+	my $myCodonTable   = Bio::Tools::CodonTable->new();
+	
+	my %closest_ancestors;
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ($root);
+	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
+	my @output_files;
+	my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees", $tag);
+	make_path($dir);
+	print($root->get_name()."\n");
+	print($self -> {static_fasta}{$root->get_name()}."\n");
+	my $rootseq = $self -> {static_fasta}{$root->get_name()};
+	
+	for (my $i = 0; $i < scalar @allsites; $i++){
+		my $ind = $allsites[$i];
+		
+		my $rootletter;
+		my $rootcodon;
+		if($rootseq){
+			$rootcodon = substr($rootseq, 3*($ind-1),3);
+			$rootletter= $myCodonTable->translate($rootcodon);
+		}
+		else{
+			my $i = 0;
+			while($root->get_child($i)){
+				my $node = $root->get_child($i);
+				if (!($node->is_terminal)){
+					my $nodeseq = $self -> {static_fasta}{$node->get_name()};
+					$rootcodon = substr($nodeseq, 3*($ind-1),3);
+					$rootletter= $myCodonTable->translate($rootcodon);
+					last;
+				}
+				$i++;
+			}
+		}
+		my $eventsfile = $self -> {static_protein}."_treescheme_".$ind;
+		my $filepath = File::Spec -> catfile($dir, $eventsfile);
+		open FILE, ">$filepath";
+		if ($state eq "nsyn"){
+			print FILE "root:".$root->get_name()."|".$rootletter."|".$rootletter."(".$rootcodon.")\n";
+		}
+		else{
+			print FILE "root:".$root->get_name()."|".$rootcodon."|".$rootcodon."(".$rootletter.")\n";
+		}
+		
+		foreach my $n ( @{$self -> {static_nodes_with_sub}{$ind}} ){
+			my $ancnodename = $$n->get_name();
+			my %subs;
+			my %color;
+			my $sub = ${$self -> {static_subs_on_node}{$ancnodename}}{$ind};
+			$subs{$ancnodename} = $sub->{"Substitution::derived_allele"};
+			$color{$ancnodename} = 1;
+			if (exists $self->{static_subtree_info}{$ancnodename}{$ind}){
+				foreach my $node ( keys %{$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}}){
+					if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]){
+						my $sub = ${$self -> {static_subs_on_node}{$node}}{$ind};
+						print ($sub."\n");
+						$subs{$node} =  $sub->{"Substitution::derived_allele"};
+						$color{$node} = 1;
+					}
+					else {
+						$color{$node} = 1;
+					}
+			}
+			}
+
+			my $ancsub = $subs{$ancnodename};
+			my $aaancsub = $myCodonTable->translate($ancsub);
+			if ($state eq "nsyn"){
+				print FILE "Ancnode:$ancnodename"."|".$aaancsub."|".$aaancsub."(".$ancsub.")\n";
+			}
+			else {
+				print FILE "Ancnode:$ancnodename"."|".$ancsub."|".$ancsub."(".$aaancsub.")\n";				
+			}
+			print FILE "Events:";
+			foreach my $node (keys %subs){
+				my $nodesub = $subs{$node};
+				if ($state eq "nsyn"){
+					my $aanodesub = $myCodonTable->translate($nodesub);
+					print FILE $node."|".$aanodesub.",";
+				}
+				else{
+					print FILE $node."|".$nodesub.",";
+				}
+			}
+			print FILE "\n";
+			print FILE "Subtree:";
+			foreach my $node (keys %color){
+				print FILE $node.",";
+			}
+			print FILE "\n";
+		}
+		
+		my %subs;
+		foreach my $n ( @{$self -> {static_background_nodes_with_sub}{$ind}} ){
+			my $ancnodename = $$n->get_name();
+			my $sub = ${$self -> {static_background_subs_on_node}{$ancnodename}}{$ind};
+			my $str;
+			if ($state eq "nsyn"){
+				$str = $sub->{"Substitution::ancestral_allele"}."->".$sub->{"Substitution::derived_allele"};
+			}
+			else {
+				my $ancc = $sub->{"Substitution::ancestral_allele"};
+				my $derc = $sub->{"Substitution::derived_allele"};
+				my $ancaa = $myCodonTable->translate($ancc);
+				my $deraa = $myCodonTable->translate($derc);
+				$str = $ancc."(".$ancaa.")->".$derc."(".$deraa.")";
+			}
+			$subs{$ancnodename} = $str;
+		}
+		print FILE "Synonymous:";
+		foreach my $node (keys %subs){
+			my $str = $subs{$node};
+			print FILE $node."|".$str.",";
+		}
+		close FILE;
+		push @output_files, $filepath;
+	}
+	return @output_files;
+}
 
 
 #global analysis
 
-sub logic_global_median_statistics{
+sub global_stats{
 	my $mutmap = shift;
 	my $step = shift;
 	my $iterate = shift;
@@ -46,13 +173,12 @@ sub logic_global_median_statistics{
 	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 	my @bootstrap_median_diff;
 	my @bins = ();
-	my @array = (1..565);
-
+	my @array = (1..$mutmap->{static_length});
 
 	foreach my $ind(@array){
 			print OUT $ind."\n";
 			my %distr = find_all_distances_probs($mutmap, $ind);
-			print (Dumper(\%distr));
+print (Dumper(\%distr));
 			my @site_bins = distr_to_stathist_probs(\%distr, $step);
 			
 			if (defined $site_bins[0]->[1] && defined $site_bins[1]->[1]){
@@ -92,7 +218,7 @@ sub logic_global_median_statistics{
 	for (my $t = 0; $t < $iterate; $t++){
 	    print "shuffling $t\n";
 		my @shuffler_bins;
-		for (my $ind = 1; $ind <566; $ind++){
+		for my $ind (@array){
 			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
 			my @shuffler_site_bins = distr_to_stathist_probs (\%shuffled_distr, $step);
 				if (defined $shuffler_site_bins[0]->[1] && defined $shuffler_site_bins[1]->[1]){
@@ -133,11 +259,12 @@ sub logic_global_median_statistics{
 
 
 # analyze sites
-sub logic_median_statistics {
+sub single_sites_stats {
 	my $mutmap = shift;
 	my $step = shift;
 	my $iterate = shift;
 	my $sites = shift;
+	my $verbose = shift;
 	
 	$sites = [1..$mutmap->{static_length}] unless ($sites) ;
 	
@@ -155,14 +282,27 @@ sub logic_median_statistics {
 		my @bootstrap_median_diff;
 		print OUT ">debug site $ind \n";
 		my %distr = find_all_distances_probs($mutmap, $ind);
-		print (Dumper(\%distr));
+		if ($verbose) {
+			print OUT "output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]\n";
+			print OUT (Dumper(\%distr));
+			print OUT "node,anc,der,prob\n";
+			foreach my $node (@{$nodes_with_sub{$ind}}){
+				my @sorted =  sort { $b->{"Substitution::probability"} <=> $a->{"Substitution::probability"} } @{$subs_on_node{${$node}->get_name()}->{$ind}};
+				foreach my $sub(@sorted){
+					print OUT ${$node}->get_name().",".$sub->{"Substitution::ancestral_allele"}.",".$sub->{"Substitution::derived_allele"}.",".$sub->{"Substitution::probability"}."\n";
+				}
+			}
+		}
 		print OUT "key\tsame_count\tdiff_count\n";
 		foreach my $k (keys %distr){
 			print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n"; # distr{$anc$der$num}[2] = (same, diff)
 		}
 		my @bins = distr_to_stathist_probs(\%distr, $step);
-print "Bins!\n";
-print (Dumper \@bins);
+		if ($verbose) {
+			my @hbins = compress_array_of_bins_to_hash(\@bins);
+			print OUT "This is a compressed output from distr_to_stathist_probs (this data structure is only used for debugging purposes): {interval-> weighted same}, {interval-> weighted diff}\n";
+			print OUT (Dumper(\@hbins));
+		}
 		my $same_median = hist_median(\@{$bins[0]});
 		my $diff_median = hist_median(\@{$bins[1]});
 		my $obs_difference = $diff_median-$same_median;
@@ -208,6 +348,7 @@ sub logic_medstat_groups_labelshuffler {
 	my $iterate = shift;
 	my $groupname = shift;
 	my @group = @{$_[0]};
+	my @array_of_sites = (1..$mutmap->{static_length});
 	
 	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
@@ -227,7 +368,7 @@ $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_labelshuffler_".$
 	
 #my @arr = @h1_host_shift;
 print OUT "site\tsame_median\tdiff_median\tmedian_difference\tpvalue\n";
-	for (my $ind = 1; $ind <566; $ind++){
+	for my $ind (@array_of_sites){
 		print OUT $ind."\n";
 		my %distr = find_all_distances($mutmap, $ind);
 		my @site_bins = distr_to_stathist(\%distr, $step);
@@ -288,7 +429,7 @@ print OUT "site\tsame_median\tdiff_median\tmedian_difference\tpvalue\n";
 	
 	for (my $t = 0; $t < $iterate; $t++){
 		my @shuffler_bins;
-		for (my $ind = 1; $ind <566; $ind++){
+		for my $ind (@array_of_sites){
 			my %distr = find_all_distances($mutmap, $ind, "shuffle");
 			my @site_bins = distr_to_stathist(\%distr, $step);
 			if (defined $site_bins[0]->[1] && defined $site_bins[1]->[1]){
@@ -328,6 +469,7 @@ sub logic_medstat_groups {
 	my $iterate = shift;
 	my $groupname = shift;
 	my @group = @{$_[0]};
+	my @array_of_sites = (1..$mutmap->{static_length});
 	
 	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
@@ -461,8 +603,8 @@ sub find_all_distances {
 		my $ancestor = ${$subs_on_node{${$node}->get_name()}}{$site_index}->{"Substitution::ancestral_allele"}; #todo to array of subst
 		push @{$hash_of_nodes{$ancestor}}, $node;
 	}
-print ("site $site_index\n");
-print Dumper(\%hash_of_nodes);
+#print ("site $site_index\n");
+#print Dumper(\%hash_of_nodes);
 	foreach my $ancestor (keys %hash_of_nodes){
 		my @nodes_subset = @{$hash_of_nodes{$ancestor}};
 		my @shuffled;
@@ -563,17 +705,17 @@ sub find_all_distances_probs {
 				$hash_of_nodes{$ancestor}{${$node}->get_name()} = $node;
 			}
 	}
-print ("site $site_index\n");	
-# print Dumper(\%hash_of_nodes);
+#print ("site $site_index\n");	
+#print Dumper(\%hash_of_nodes);
 	foreach my $ancestor (keys %hash_of_nodes){
-print $ancestor."\n";	
+#print $ancestor."\n";	
 		my @nodes_subset =  values %{$hash_of_nodes{$ancestor}};
 		my @shuffled;
 		if ($shuffle) {@shuffled = shuffle @nodes_subset;}
 		else {@shuffled = @nodes_subset;}
 		for (my $i = 0; $i < scalar @nodes_subset; $i++){
-print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
-print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
+#print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
+#print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
 			foreach my $sub1 (@{$subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}}){
 					next if $sub1->{"Substitution::ancestral_allele"} ne $ancestor; 
 					my $weight1 = $sub1->{"Substitution::probability"};
@@ -582,7 +724,7 @@ print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unles
 					my $count_diff;
 					my $count_same_pairs;
 					my $count_diff_pairs;
-print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
+#print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
 					for (my $j = 0; $j < scalar @nodes_subset; $j++){
 						if ($j == $i){ next; }
 					#	if (value_is_in_array(${$shuffled[$j]}, \@{ ${$shuffled[$i]}->get_sisters })){ #!
@@ -597,7 +739,7 @@ print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $
 								my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
 								my $pairweight = $weight1*$weight2;
 							   # my $dist =  calc_true_patristic_distance(${$shuffled[$i]}, ${$shuffled[$j]});
-print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
+#print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
 								if ($pairweight > 0){ # ie these nodes are not sequential; does not work since 02 06 2015
 									if (!exists $hash{"$ancestor$derived1$i"} ){
 										my @same = ();
@@ -621,7 +763,7 @@ print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $di
 
 
 					}
-					 print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
+#					 print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
 							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_same;
 							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_diff;
 
@@ -745,16 +887,18 @@ sub find_all_distances_except_seq_and_sis_radius_old {
 #$hash{"$ancestor$derived1$i"}->[1]  =  (($diffdist,$pairweight),($diffdist,$pairweight).. )
 #$hash{"$ancestor$derived1$i"}->[2] = ($samecount, $diffcount)
 
-	sub distr_to_stathist_probs {
+# as of 06/08/2019 For one site sum of $distr{$subst}->[0] = sum of $distr{$subst}->[1] = total number of non-lonely substitutions (does not depend on weights!)
+sub distr_to_stathist_probs {
 		my %distr = %{$_[0]};
 		my $step = $_[1];
 		my @bins;
 		my %hash;
 		my %pruned_distr;
-
+		
+		if (!%distr){return @bins;}
 		# neva july normalization
 		foreach my $subst(keys %distr){
-		#	print "subst $subst \n";
+#print "subst $subst \n";
 			if (defined $distr{$subst}->[0] && defined $distr{$subst}->[1]) {
 				my $same_size = $distr{$subst}->[2]->[0];
 				my $diff_size = $distr{$subst}->[2]->[1];
@@ -763,57 +907,56 @@ sub find_all_distances_except_seq_and_sis_radius_old {
 				$hash{$ancestor_derived} = 1;
 			}
 		}
-		
+		if (!%pruned_distr){return @bins;}
 		my $mutgroups_count = scalar keys %hash;
-print "pruned distr\n";
-print (Dumper (\%pruned_distr));
+#print "pruned distr\n";
+#print (Dumper (\%pruned_distr));
 		foreach my $subst(keys %pruned_distr){
-print "pruned subst $subst \n";
+#print "pruned subst $subst \n";
 					my $same_size = $pruned_distr{$subst}->[2]->[0];
-					my $diff_size = $pruned_distr{$subst}->[2]->[1];
-				
+					my $diff_size = $pruned_distr{$subst}->[2]->[1];			
 						
-						my %stemp;
-						my %dtemp;
-						my $maxbin = 0;
-						my $d_weights_sum;
-						my $s_weights_sum;
-						foreach my $s_distance_weight (@{$pruned_distr{$subst}->[0]}){
-							my $b = bin($s_distance_weight->[0],$step);
-							$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];
-print "s_weights_sum was $s_weights_sum "; 							
-							$s_weights_sum +=$s_distance_weight->[1];
-print "and now is	$s_weights_sum \n";				
-							$maxbin = $b if ($b > $maxbin);
-						}
-						foreach my $d_distance_weight (@{$pruned_distr{$subst}->[1]}){
-							my $b = bin($d_distance_weight->[0],$step);
-							$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];
-print "d_weights_sum was $d_weights_sum "; 								
-							$d_weights_sum +=$d_distance_weight->[1];
-print "and now is	$d_weights_sum \n";	
-							$maxbin = $b if ($b > $maxbin);
-						}
-print "s_weights_sum $s_weights_sum d_weights_sum $d_weights_sum\n";
-						foreach my $interval(0..$maxbin){
-							# my $scount = $stemp{$interval}/$same_size; # normalize to get average count of mutations in i-radius of a mutation
-							# my $dcount = $dtemp{$interval}/$same_size; 
-							# if (!defined $scount){
-								# $scount = 0; # can be 0 for mutation on one branch
-							# }
-							# if (!defined $dcount){
-								# $dcount = 0;
-							# }
-						# #	print "interval $interval scount $scount same_size $same_size diff_size $diff_size mutgroups_count $mutgroups_count \n";
-							# $bins[0]->[$interval] += $scount/(($same_size-1)*$mutgroups_count); # $mutgroups_count - for integral over all intervals to be 1
-							# $bins[1]->[$interval] += $dcount/($diff_size*$mutgroups_count);
-							
-							$bins[0]->[$interval] += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
-							$bins[1]->[$interval] += $dtemp{$interval}/$d_weights_sum;
-						}
+					my %stemp;
+					my %dtemp;
+					my $maxbin = 0;
+					my $d_weights_sum;
+					my $s_weights_sum;
+					foreach my $s_distance_weight (@{$pruned_distr{$subst}->[0]}){
+						my $b = bin($s_distance_weight->[0],$step);
+						$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];
+#print "s_weights_sum was $s_weights_sum "; 							
+						$s_weights_sum +=$s_distance_weight->[1];
+#print "and now is	$s_weights_sum \n";				
+						$maxbin = $b if ($b > $maxbin);
+					}
+					foreach my $d_distance_weight (@{$pruned_distr{$subst}->[1]}){
+						my $b = bin($d_distance_weight->[0],$step);
+						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];
+#print "d_weights_sum was $d_weights_sum "; 								
+						$d_weights_sum +=$d_distance_weight->[1];
+#print "and now is	$d_weights_sum \n";	
+						$maxbin = $b if ($b > $maxbin);
+					}
+#print "s_weights_sum $s_weights_sum d_weights_sum $d_weights_sum\n";
+					foreach my $interval(0..$maxbin){
+						# my $scount = $stemp{$interval}/$same_size; # normalize to get average count of mutations in i-radius of a mutation
+						# my $dcount = $dtemp{$interval}/$same_size; 
+						# if (!defined $scount){
+							# $scount = 0; # can be 0 for mutation on one branch
+						# }
+						# if (!defined $dcount){
+							# $dcount = 0;
+						# }
+					# #	print "interval $interval scount $scount same_size $same_size diff_size $diff_size mutgroups_count $mutgroups_count \n";
+						# $bins[0]->[$interval] += $scount/(($same_size-1)*$mutgroups_count); # $mutgroups_count - for integral over all intervals to be 1
+						# $bins[1]->[$interval] += $dcount/($diff_size*$mutgroups_count);
+						
+						$bins[0]->[$interval] += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
+						$bins[1]->[$interval] += $dtemp{$interval}/$d_weights_sum;
+					}
 
 		}
-		
+
 for ( my $i  = 0; $i < scalar @{$bins[0]}; $i++){
 print "interval $i s ".$bins[0]->[$i]."\n" if $bins[0]->[$i]>0;
 }
@@ -823,7 +966,88 @@ print "interval $i d ".$bins[1]->[$i]."\n" if $bins[1]->[$i]>0;
 		return @bins;
 }
 
-	sub distr_to_stathist {
+
+sub distr_to_stathist_probs_2 {
+		my %distr = %{$_[0]};
+		my $step = $_[1];
+		my @bins;
+		my %hash;
+		my %pruned_distr;
+		
+		if (!%distr){return @bins;}
+		# neva july normalization
+		foreach my $subst(keys %distr){
+#print "subst $subst \n";
+			if (defined $distr{$subst}->[0] && defined $distr{$subst}->[1]) {
+				my $same_size = $distr{$subst}->[2]->[0];
+				my $diff_size = $distr{$subst}->[2]->[1];
+				$pruned_distr{$subst} = $distr{$subst};
+				my $ancestor_derived = $subst =~ s/[0-9]//gr; 
+				$hash{$ancestor_derived} = 1;
+			}
+		}
+		if (!%pruned_distr){return @bins;}
+		my $mutgroups_count = scalar keys %hash;
+#print "pruned distr\n";
+#print (Dumper (\%pruned_distr));
+		foreach my $subst(keys %pruned_distr){
+#print "pruned subst $subst \n";
+					my $same_size = $pruned_distr{$subst}->[2]->[0];
+					my $diff_size = $pruned_distr{$subst}->[2]->[1];			
+						
+					my %stemp;
+					my %dtemp;
+					my $maxbin = 0;
+					my $d_sum;
+					my $s_sum;
+					foreach my $s_distance_weight (@{$pruned_distr{$subst}->[0]}){
+						my $b = bin($s_distance_weight->[0],$step);
+						$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];
+#print "s_weights_sum was $s_weights_sum "; 							
+						$s_sum +=1; # add 1 instead of weight
+#print "and now is	$s_weights_sum \n";				
+						$maxbin = $b if ($b > $maxbin);
+					}
+					foreach my $d_distance_weight (@{$pruned_distr{$subst}->[1]}){
+						my $b = bin($d_distance_weight->[0],$step);
+						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];
+#print "d_weights_sum was $d_weights_sum "; 								
+						$d_sum +=1; # add 1 instead of weight
+#print "and now is	$d_weights_sum \n";	
+						$maxbin = $b if ($b > $maxbin);
+					}
+#print "s_weights_sum $s_weights_sum d_weights_sum $d_weights_sum\n";
+					foreach my $interval(0..$maxbin){						
+						$bins[0]->[$interval] += $stemp{$interval}/$s_sum; # $mutgroups_count - for integral over all intervals to be 1
+						$bins[1]->[$interval] += $dtemp{$interval}/$d_sum;
+					}
+
+		}
+
+for ( my $i  = 0; $i < scalar @{$bins[0]}; $i++){
+print "interval $i s ".$bins[0]->[$i]."\n" if $bins[0]->[$i]>0;
+}
+for ( my $i  = 0; $i < scalar @{$bins[1]}; $i++){
+print "interval $i d ".$bins[1]->[$i]."\n" if $bins[1]->[$i]>0;
+}
+		return @bins;
+}
+
+
+sub compress_array_of_bins_to_hash {
+		my @bins = @{$_[0]};
+		my @shortbins;
+		print scalar (@{$bins[0]})."\n";
+		foreach my $interval(0..scalar (@{$bins[0]}) -1){
+			if ($bins[0]->[$interval] || $bins[1]->[$interval]){
+				$shortbins[0]->{$interval} = $bins[0]->[$interval];
+				$shortbins[1]->{$interval} = $bins[1]->[$interval];
+			}
+		}
+		return @shortbins;
+}
+
+sub distr_to_stathist {
 		my %distr = %{$_[0]};
 		my $step = $_[1];
 		my @bins;

@@ -14,12 +14,12 @@ use Data::Dumper;
 use Parsers;
 
 
-my $args = {protein => "toy", state => "nsyn", bigtag => "test"};
+my $args = {protein => "toy", state => "nsyn", bigtag => "test_2"};
 my $mutmap = ProbsMutmap->new($args);
 
 
-my @sites_subset = (2);
-Aspens::single_sites_stats($mutmap, 0.00005, 100, \@sites_subset); # Works!
+my @sites_subset = (1..$mutmap->{static_length});
+Aspens::single_sites_stats($mutmap, 0.00005, 100, \@sites_subset, "verbose"); # Works!
 
 
 
