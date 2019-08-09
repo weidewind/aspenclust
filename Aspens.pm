@@ -19,6 +19,7 @@ use Statistics::Basic qw(:all);
 use Statistics::TTest;
 use Statistics::Descriptive;
 use Storable qw(store retrieve lock_retrieve);
+use List::MoreUtils qw(uniq);
 
 use Class::Struct;
 use IO::Handle;
@@ -787,7 +788,6 @@ sub find_all_distances_except_seq_and_sis_radius_old {
 # as of 06/08/2019 For one site sum of $distr{$subst}->[0] = sum of $distr{$subst}->[1] = total number of non-lonely substitutions (does not depend on weights!)
 sub distr_to_stathist_probs {
 		my %distr = %{$_[0]};
-		my $step = $_[1];
 		my @bins;
 		my %hash;
 		my %pruned_distr;
@@ -806,48 +806,26 @@ sub distr_to_stathist_probs {
 		}
 		if (!%pruned_distr){return @bins;}
 		my $mutgroups_count = scalar keys %hash;
-#print "pruned distr\n";
-#print (Dumper (\%pruned_distr));
 		foreach my $subst(keys %pruned_distr){
-#print "pruned subst $subst \n";
 					my $same_size = $pruned_distr{$subst}->[2]->[0];
 					my $diff_size = $pruned_distr{$subst}->[2]->[1];			
 						
 					my %stemp;
 					my %dtemp;
-					my $maxbin = 0;
 					my $d_weights_sum;
 					my $s_weights_sum;
 					foreach my $s_distance_weight (@{$pruned_distr{$subst}->[0]}){
-						my $b = bin($s_distance_weight->[0],$step);
-						$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];
-#print "s_weights_sum was $s_weights_sum "; 							
-						$s_weights_sum +=$s_distance_weight->[1];
-#print "and now is	$s_weights_sum \n";				
-						$maxbin = $b if ($b > $maxbin);
+						my $b = $s_distance_weight->[0];
+						$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];						
+						$s_weights_sum +=$s_distance_weight->[1];		
 					}
 					foreach my $d_distance_weight (@{$pruned_distr{$subst}->[1]}){
-						my $b = bin($d_distance_weight->[0],$step);
-						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];
-#print "d_weights_sum was $d_weights_sum "; 								
+						my $b = $d_distance_weight->[0];
+						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];								
 						$d_weights_sum +=$d_distance_weight->[1];
-#print "and now is	$d_weights_sum \n";	
-						$maxbin = $b if ($b > $maxbin);
 					}
-#print "s_weights_sum $s_weights_sum d_weights_sum $d_weights_sum\n";
-					foreach my $interval(0..$maxbin){
-						# my $scount = $stemp{$interval}/$same_size; # normalize to get average count of mutations in i-radius of a mutation
-						# my $dcount = $dtemp{$interval}/$same_size; 
-						# if (!defined $scount){
-							# $scount = 0; # can be 0 for mutation on one branch
-						# }
-						# if (!defined $dcount){
-							# $dcount = 0;
-						# }
-					# #	print "interval $interval scount $scount same_size $same_size diff_size $diff_size mutgroups_count $mutgroups_count \n";
-						# $bins[0]->[$interval] += $scount/(($same_size-1)*$mutgroups_count); # $mutgroups_count - for integral over all intervals to be 1
-						# $bins[1]->[$interval] += $dcount/($diff_size*$mutgroups_count);
-						
+					my @alldists = uniq(keys %stemp, keys %dtemp); 
+					foreach my $interval(@alldists){
 						$bins[0]->[$interval] += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
 						$bins[1]->[$interval] += $dtemp{$interval}/$d_weights_sum;
 					}

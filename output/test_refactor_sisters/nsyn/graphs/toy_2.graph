@@ -1,0 +1,8 @@
+Ancestor:E(GAA)
+Derived:K|0.0012
+Ancestor:E(GAG)
+Derived:K|0.0288
+Ancestor:K(AAA)
+Derived:E|0.0297,R|1,E|0.0388,N|1,T|1
+Ancestor:K(AAG)
+Derived:E|0.0003,E|0.9312

@@ -14,7 +14,7 @@ use Data::Dumper;
 use Parsers;
 
 
-my $args = {protein => "toy", state => "nsyn", bigtag => "test_sisters"};
+my $args = {protein => "toy", state => "nsyn", bigtag => "test_debinned"};
 my $mutmap = ProbsMutmap->new($args);
 
 Aspens::global_stats($mutmap, 0.00005, 100);
