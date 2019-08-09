@@ -178,14 +178,13 @@ sub single_sites_stats {
 		foreach my $k (keys %distr){
 			print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n"; # distr{$anc$der$num}[2] = (same, diff)
 		}
-		my @bins = distr_to_stathist_probs(\%distr, $step);
+		my @bins = distr_to_stathist_probs(\%distr);
 		if ($verbose) {
-			my @hbins = compress_array_of_bins_to_hash(\@bins);
-			print OUT "This is a compressed output from distr_to_stathist_probs (this data structure is only used for debugging purposes): {interval-> weighted same}, {interval-> weighted diff}\n";
-			print OUT (Dumper(\@hbins));
+			print OUT "Output from distr_to_stathist_probs : {interval-> weighted same}, {interval-> weighted diff}\n";
+			print OUT (Dumper(\@bins));
 		}
-		my $same_median = hist_median(\@{$bins[0]});
-		my $diff_median = hist_median(\@{$bins[1]});
+		my $same_median = hist_median(\%{$bins[0]});
+		my $diff_median = hist_median(\%{$bins[1]});
 		my $obs_difference = $diff_median-$same_median;
 		print OUT ">site\tsame_median\tdiff_median\tmedian_difference\tpvalue\n";
 		print OUT $ind."\t";
@@ -196,7 +195,7 @@ sub single_sites_stats {
 		for (my $t = 0; $t < $iterate; $t++){
 			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
 			my @shuffler_bins = distr_to_stathist_probs(\%shuffled_distr, $step);
-			push @bootstrap_median_diff, hist_median(\@{$shuffler_bins[1]})-hist_median(\@{$shuffler_bins[0]});
+			push @bootstrap_median_diff, hist_median(\%{$shuffler_bins[1]})-hist_median(\%{$shuffler_bins[0]});
 		}
 		
 		my @sorted_bootstrap = sort {$a <=> $b} @bootstrap_median_diff;
