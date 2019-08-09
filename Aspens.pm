@@ -72,38 +72,28 @@ sub global_stats{
 			print OUT $ind."\n";
 			my %distr = find_all_distances_probs($mutmap, $ind);
 print (Dumper(\%distr));
-			my @site_bins = distr_to_stathist_probs(\%distr, $step);
-			
-			if (defined $site_bins[0]->[1] && defined $site_bins[1]->[1]){
-				for( my $interval = 0; $interval < scalar @{$site_bins[0]}; $interval++){
-					$bins[0]->[$interval] += $site_bins[0]->[$interval];
-#					print OUT $site_bins[0]->[$interval];
-#					print OUT "\t";
-#					print OUT $bins[0]->[$interval];
-#					print OUT "\t";
+			my @site_bins = distr_to_stathist_probs(\%distr);
+			if (defined $site_bins[0] && defined $site_bins[1]){
+				foreach my $interval( keys %{$site_bins[0]}){
+					$bins[0]->{$interval} += $site_bins[0]->{$interval};
 				}
-				print OUT "\n";
-				for (my $interval = 0; $interval < scalar @{$site_bins[1]}; $interval++){
-					$bins[1]->[$interval] += $site_bins[1]->[$interval];
-#					print OUT $site_bins[1]->[$interval];
-#					print OUT "\t";			
-#					print OUT $bins[1]->[$interval];
-#					print OUT "\t";
+				foreach my $interval( keys %{$site_bins[1]}){
+					$bins[1]->{$interval} += $site_bins[1]->{$interval};
 				}
-#				print OUT "\n";
 			}
 	}
 	
-	print OUT "Same\n";
-	for( my $interval = 0; $interval < scalar @{$bins[0]}; $interval++){
-		print OUT $interval."\t".$bins[0]->[$interval]."\n";
-	}
-	print OUT "Different\n";
-	for( my $interval = 0; $interval < scalar @{$bins[1]}; $interval++){
-		print OUT $interval."\t".$bins[1]->[$interval]."\n";
-	}
-	my $same_median = hist_median(\@{$bins[0]});
-	my $diff_median = hist_median(\@{$bins[1]});
+	# print OUT "Same\n";
+	# my @intervals = sort(uniq(keys %{$bins[0]}, keys %{$bins[1]}))
+	# foreach my $interval( @intervals){
+		# print OUT $interval."\t".$bins[0]->[$interval]."\n";
+	# }
+	# print OUT "Different\n";
+	# foreach my $interval( @intervals){
+		# print OUT $interval."\t".$bins[1]->[$interval]."\n";
+	# }
+	my $same_median = hist_median(\%{$bins[0]});
+	my $diff_median = hist_median(\%{$bins[1]});
 	my $obs_difference = $diff_median-$same_median;
 
 	
@@ -114,19 +104,17 @@ print (Dumper(\%distr));
 		for my $ind (@array){
 			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
 			my @shuffler_site_bins = distr_to_stathist_probs (\%shuffled_distr, $step);
-				if (defined $shuffler_site_bins[0]->[1] && defined $shuffler_site_bins[1]->[1]){
-
-				for(my $interval = 0; $interval < scalar @{$shuffler_site_bins[0]}; $interval++){
-					$shuffler_bins[0]->[$interval] += $shuffler_site_bins[0]->[$interval];
+			if (defined $shuffler_site_bins[0] && defined $shuffler_site_bins[1]){
+				foreach my $interval( keys %{$shuffler_site_bins[0]}){
+					$shuffler_bins[0]->{$interval} += $shuffler_site_bins[0]->{$interval};
 				}
-				for(my $interval = 0; $interval < scalar @{$shuffler_site_bins[1]}; $interval++){
-					$shuffler_bins[1]->[$interval] += $shuffler_site_bins[1]->[$interval];
+				foreach my $interval( keys %{$shuffler_site_bins[1]}){
+					$shuffler_bins[1]->{$interval} += $shuffler_site_bins[1]->{$interval};
 				}
 			}
-			
 		}
-		my $shd = hist_median(\@{$shuffler_bins[1]});
-		my $shs = hist_median(\@{$shuffler_bins[0]});
+		my $shd = hist_median(\%{$shuffler_bins[1]});
+		my $shs = hist_median(\%{$shuffler_bins[0]});
 		my $diff = $shd-$shs;
 		print OUT "boot $shd $shs $diff \n";
 		push @bootstrap_median_diff, $diff;
@@ -824,20 +812,22 @@ sub distr_to_stathist_probs {
 						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];								
 						$d_weights_sum +=$d_distance_weight->[1];
 					}
+					print "Printing unique distances\n";
 					my @alldists = uniq(keys %stemp, keys %dtemp); 
+					print Dumper (\@alldists);
 					foreach my $interval(@alldists){
-						$bins[0]->[$interval] += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
-						$bins[1]->[$interval] += $dtemp{$interval}/$d_weights_sum;
+						$bins[0]->{$interval} += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
+						$bins[1]->{$interval} += $dtemp{$interval}/$d_weights_sum;
 					}
 
 		}
 
-for ( my $i  = 0; $i < scalar @{$bins[0]}; $i++){
-print "interval $i s ".$bins[0]->[$i]."\n" if $bins[0]->[$i]>0;
-}
-for ( my $i  = 0; $i < scalar @{$bins[1]}; $i++){
-print "interval $i d ".$bins[1]->[$i]."\n" if $bins[1]->[$i]>0;
-}
+# for ( my $i  = 0; $i < scalar @{$bins[0]}; $i++){
+# print "interval $i s ".$bins[0]->{$i}."\n" if $bins[0]->{$i}>0;
+# }
+# for ( my $i  = 0; $i < scalar @{$bins[1]}; $i++){
+# print "interval $i d ".$bins[1]->{$i}."\n" if $bins[1]->{$i}>0;
+# }
 		return @bins;
 }
 
@@ -987,21 +977,22 @@ sub distr_to_stathist {
 
 #takes an array of probabilities for 0,1,2...
 sub hist_median{
-	my @hist = @{$_[0]};
-	my $summ = sum (@hist);
+	my %hist = %{$_[0]};
+	my $summ = sum (values %hist);
 	return 0 if $summ == 0; # since 2018 :)
 	my $head = 0;
-	my $interval = 0;
+	my $i = 0;
 	my $median = 0;
+	my @sorted_dists = sort(keys %hist);
 	
 	while ($head < $summ/2){
-		$head += $hist[$interval];
-		$median = $interval;
-		$interval++;
+		$head += $hist{$sorted_dists[$i]};
+		$median = $sorted_dists[$i];
+		$i++;
 	}
 	
 	if ($head == $summ/2){
-		$median += 0.5;
+		$median = ($sorted_dists[$i-1]+$sorted_dists[$i-1])/2;
 	}
 #print_hist(\@hist);
 	return $median;
