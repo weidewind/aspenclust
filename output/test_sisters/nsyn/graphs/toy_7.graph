@@ -1,0 +1,8 @@
+Ancestor:I(ATT)
+Derived:V|1,V|1
+Ancestor:V(GTT)
+Derived:I|1,I|1,I|1,I|1
+Ancestor:V(GTC)
+Derived:A|1,I|0.02,I|1,I|1,I|0.0168,I|1,I|1,I|1,I|0.16,I|1,I|1,A|1,I|1,I|0.02,I|1,I|1,A|1,I|0.8232,I|1,I|1
+Ancestor:I(ATC)
+Derived:V|0.1568,V|0.02,V|0.02,V|0.0032

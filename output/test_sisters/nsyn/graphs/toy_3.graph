@@ -1,0 +1,8 @@
+Ancestor:A(GCG)
+Derived:V|0.02
+Ancestor:A(GCA)
+Derived:V|0.0099,V|0.01,V|1,V|0.0099,V|0.99,V|0.61,V|0.01,V|1,V|0.01,V|0.2379
+Ancestor:V(GTA)
+Derived:A|0.39,A|0.0099,A|1,A|0.02,A|1,A|1,A|0.01,A|1,A|0.99,L|1,A|0.99,A|0.01,A|0.0099,A|0.61,A|1,A|1,A|1,A|1,A|1,A|0.39,A|1,A|1,A|1,A|0.2379,A|1,A|1,A|1,A|1
+Ancestor:V(GTG)
+Derived:A|1,A|0.98,A|1

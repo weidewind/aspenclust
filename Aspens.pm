@@ -27,133 +27,25 @@ use File::Spec;
 
 $| = 1;
 
-
-sub print_colored_trees {
+sub print_scheme{
 	my $self = shift;
-	my @allsites = @{@_[0]};;
-	my $tag = $_[1];
-	my $root = $self->{static_tree}-> get_root;
-	my @array;
-	my $state = $self->{static_state};
+	my $ind  = shift;
+	my $filepath  = $self->graphpath($ind);
+	$self->set_same_ancestor_subs();
+	my %hash = %{$self->{static_same_ancestor_subs}};
 	my $myCodonTable   = Bio::Tools::CodonTable->new();
 	
-	my %closest_ancestors;
-	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
-	my @args = ($root);
-	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
-	my @output_files;
-	my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees", $tag);
-	make_path($dir);
-	print($root->get_name()."\n");
-	print($self -> {static_fasta}{$root->get_name()}."\n");
-	my $rootseq = $self -> {static_fasta}{$root->get_name()};
-	
-	for (my $i = 0; $i < scalar @allsites; $i++){
-		my $ind = $allsites[$i];
-		
-		my $rootletter;
-		my $rootcodon;
-		if($rootseq){
-			$rootcodon = substr($rootseq, 3*($ind-1),3);
-			$rootletter= $myCodonTable->translate($rootcodon);
+	open OUT, ">$filepath" or die "Cannot open $filepath $!";
+	foreach my $anc (keys %{$hash{$ind}}){
+		print OUT "Ancestor:".$myCodonTable->translate($anc)."(".$anc.")\n";
+		print OUT "Derived:";
+		my @subs;
+		foreach my $sub (@{$hash{$ind}->{$anc}}){
+			push @subs, $sub->{"Substitution::derived_allele"}."|".$sub->{"Substitution::probability"};
 		}
-		else{
-			my $i = 0;
-			while($root->get_child($i)){
-				my $node = $root->get_child($i);
-				if (!($node->is_terminal)){
-					my $nodeseq = $self -> {static_fasta}{$node->get_name()};
-					$rootcodon = substr($nodeseq, 3*($ind-1),3);
-					$rootletter= $myCodonTable->translate($rootcodon);
-					last;
-				}
-				$i++;
-			}
-		}
-		my $eventsfile = $self -> {static_protein}."_treescheme_".$ind;
-		my $filepath = File::Spec -> catfile($dir, $eventsfile);
-		open FILE, ">$filepath";
-		if ($state eq "nsyn"){
-			print FILE "root:".$root->get_name()."|".$rootletter."|".$rootletter."(".$rootcodon.")\n";
-		}
-		else{
-			print FILE "root:".$root->get_name()."|".$rootcodon."|".$rootcodon."(".$rootletter.")\n";
-		}
-		
-		foreach my $n ( @{$self -> {static_nodes_with_sub}{$ind}} ){
-			my $ancnodename = $$n->get_name();
-			my %subs;
-			my %color;
-			my $sub = ${$self -> {static_subs_on_node}{$ancnodename}}{$ind};
-			$subs{$ancnodename} = $sub->{"Substitution::derived_allele"};
-			$color{$ancnodename} = 1;
-			if (exists $self->{static_subtree_info}{$ancnodename}{$ind}){
-				foreach my $node ( keys %{$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}}){
-					if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]){
-						my $sub = ${$self -> {static_subs_on_node}{$node}}{$ind};
-						print ($sub."\n");
-						$subs{$node} =  $sub->{"Substitution::derived_allele"};
-						$color{$node} = 1;
-					}
-					else {
-						$color{$node} = 1;
-					}
-			}
-			}
-
-			my $ancsub = $subs{$ancnodename};
-			my $aaancsub = $myCodonTable->translate($ancsub);
-			if ($state eq "nsyn"){
-				print FILE "Ancnode:$ancnodename"."|".$aaancsub."|".$aaancsub."(".$ancsub.")\n";
-			}
-			else {
-				print FILE "Ancnode:$ancnodename"."|".$ancsub."|".$ancsub."(".$aaancsub.")\n";				
-			}
-			print FILE "Events:";
-			foreach my $node (keys %subs){
-				my $nodesub = $subs{$node};
-				if ($state eq "nsyn"){
-					my $aanodesub = $myCodonTable->translate($nodesub);
-					print FILE $node."|".$aanodesub.",";
-				}
-				else{
-					print FILE $node."|".$nodesub.",";
-				}
-			}
-			print FILE "\n";
-			print FILE "Subtree:";
-			foreach my $node (keys %color){
-				print FILE $node.",";
-			}
-			print FILE "\n";
-		}
-		
-		my %subs;
-		foreach my $n ( @{$self -> {static_background_nodes_with_sub}{$ind}} ){
-			my $ancnodename = $$n->get_name();
-			my $sub = ${$self -> {static_background_subs_on_node}{$ancnodename}}{$ind};
-			my $str;
-			if ($state eq "nsyn"){
-				$str = $sub->{"Substitution::ancestral_allele"}."->".$sub->{"Substitution::derived_allele"};
-			}
-			else {
-				my $ancc = $sub->{"Substitution::ancestral_allele"};
-				my $derc = $sub->{"Substitution::derived_allele"};
-				my $ancaa = $myCodonTable->translate($ancc);
-				my $deraa = $myCodonTable->translate($derc);
-				$str = $ancc."(".$ancaa.")->".$derc."(".$deraa.")";
-			}
-			$subs{$ancnodename} = $str;
-		}
-		print FILE "Synonymous:";
-		foreach my $node (keys %subs){
-			my $str = $subs{$node};
-			print FILE $node."|".$str.",";
-		}
-		close FILE;
-		push @output_files, $filepath;
+		print OUT join(",", @subs)."\n";
 	}
-	return @output_files;
+	close OUT;
 }
 
 
@@ -737,7 +629,12 @@ sub find_all_distances_probs {
 
 							#	my $dist = calc_my_distance(${$shuffled[$i]}, ${$shuffled[$j]});
 								my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
+								
 								my $pairweight = $weight1*$weight2;
+								if (${$nodes_subset[$j]}->get_parent eq ${$nodes_subset[$i]}->get_parent){
+									print(${$nodes_subset[$j]}->get_parent);
+									$pairweight = $pairweight/$sub2->{"Substitution::ancestor_probability"};
+								}
 							   # my $dist =  calc_true_patristic_distance(${$shuffled[$i]}, ${$shuffled[$j]});
 #print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
 								if ($pairweight > 0){ # ie these nodes are not sequential; does not work since 02 06 2015

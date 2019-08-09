@@ -18,7 +18,8 @@ struct Substitution => {
 	position => '$',
 	ancestral_allele => '$',
 	derived_allele => '$',
-	probability => '$'
+	probability => '$',
+	ancestor_probability => '$'
 };
 
 
@@ -134,7 +135,8 @@ sub sub_probabilities{
 sub populate_with_subs{
 	my $ra_nsyn = $_[0]; # $ra_nsyn{$ind} = (Substitution,Substitution,..)
 	my %sub_probs = %{$_[1]};
-	my $ind = $_[2];
+	my %anc_probs = %{$_[2]};
+	my $ind = $_[3];
 	if (scalar keys %sub_probs > 0){
 		$ra_nsyn->{$ind} = [];
 	}
@@ -143,6 +145,7 @@ sub populate_with_subs{
 		for my $der (keys %{$sub_probs{$anc}}){
 			my $p=Substitution->new();
 			$p->probability($sub_probs{$anc}{$der});	
+			$p->ancestor_probability($anc_probs{$anc});
 			$p->position($ind);
 			$p->ancestral_allele($anc);
 			$p->derived_allele($der);
@@ -189,7 +192,8 @@ sub substitutions{
 			$cod = \@cod;
 		}
 		my %sub_probs = $self->sub_probabilities(\@acod,$cod,$state);
-		populate_with_subs(\%ra_nsyn, \%sub_probs, $ind);
+		my %anc_probs = $self->cod_probabilities(\@acod); # $anc_probs{$cod} = $cod_prob
+		populate_with_subs(\%ra_nsyn, \%sub_probs, \%anc_probs, $ind);
 	};
 	return  %ra_nsyn;
 }

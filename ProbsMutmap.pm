@@ -52,6 +52,15 @@ sub new {
 	return $self;
 }
 
+sub graphpath{
+	my $self = shift;
+	my $ind = shift;
+	my $filename = $self->{static_protein}."_".$ind.".graph";
+	my $path = File::Spec->catdir($self->{static_output_base}, "graphs");
+	make_path($path);
+	my $path = File::Spec->catfile($path, $filename);
+}
+
 sub probmutmap {
 	my $tree = $_[0];
 	my %fasta = %{$_[1]}; #$fasta{$nodename} = $string
@@ -84,4 +93,23 @@ sub probmutmap {
 	}
 	return (\%subs_on_node, \%nodes_with_sub);
 }
+
+sub set_same_ancestor_subs{
+	my $self = shift;
+	return if (exists $self->{static_same_ancestor_subs}); 
+	my %subs_on_node = %{$self->{static_subs_on_node}};
+	my %hash;
+	
+	foreach my $nname (keys %subs_on_node){
+		foreach my $ind (keys $subs_on_node{$nname}){
+			foreach my $sub (@{$subs_on_node{$nname}->{$ind}}){
+				my $ancestor = $sub->{"Substitution::ancestral_allele"};
+				push @{$hash{$ind}{$ancestor}}, $sub;
+			}	
+		}
+	}
+	
+	$self->{static_same_ancestor_subs} = \%hash;
+}
+
 1;
