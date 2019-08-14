@@ -1,8 +1,7 @@
-site	same_mean	diff_mean	mean_difference	pvalue
-	 same mean 	 diff mean 	 difference
-group	0.0336963005891777	0.0427531609195402	0.00905686033036249
-complement	0.0753639199589385	0.0856772968431934	0.0103133768842549
--0.00125651655389242
-pvalue e  0.42 pvalue enrichment  0.42
-pvalue d 0.58 pvalue depletion 0.58
-pvalue diffdiff enrichment 0.42 pvalue diffdiff depletion 0.58
+	size	same mean	diff mean	difference
+group	2	0.0336963005891777	0.0427531609195402	0.00905686033036249
+complement	4	0.0753639199589385	0.0856772968431934	0.0103133768842549
+diffdiff	-0.00125651655389242
+pvalue e	0.63	pvalue enrichment	0.63
+pvalue d	0.41	pvalue depletion	0.41
+pvalue diffdiff enrichment	0.63	pvalue diffdiff depletion	0.41

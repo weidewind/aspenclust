@@ -209,50 +209,10 @@ sub groups_stats_labelshuffler {
 	my $groupname = shift;
 	my @group = @{$_[0]};
 	my $average = $_[1]; #mean or median
-	
-	my $tree = $mutmap->{static_tree};
-	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
-	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
-	my @array_of_sites = (1..$mutmap->{static_length});
 
 	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_labelshuffler_".$groupname."_".$average);	
-	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
+	my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_stats($mutmap, \@group, $average, $outfile);
 
-	my @complement = array_diff(@array_of_sites, @group);
-	my @temp = collect_distances($mutmap);
-	my @bins = @{$temp[0]};
-	my @analyzed = @{$temp[1]};
-
-	my @group = intersect(@group, @analyzed);
-	my @complement = intersect(@complement, @analyzed);
-		
-	print OUT "site\tsame_$average\tdiff_$average\t".$average."_difference\tpvalue\n";
-
-	my $same_median_group = hist_group(\%{$bins[0]},\@group, $average);
-	my $diff_median_group = hist_group(\%{$bins[1]},\@group, $average);
-	my $obs_difference_group = $diff_median_group-$same_median_group;
-	print OUT "\t size \t same median \t diff median \t difference\n";
-	print OUT "group\t";
-	print OUT scalar @group; #!!!!
-	print OUT "\t";
-	print OUT $same_median_group."\t"; #median of "same" statistics
-	print OUT $diff_median_group."\t"; #median of "diff" statistics
-	print OUT $obs_difference_group."\n";
-	
-	my $same_median_complement = hist_group(\%{$bins[0]}, \@complement, $average);
-	my $diff_median_complement = hist_group(\%{$bins[1]}, \@complement, $average);
-	my $obs_difference_complement = $diff_median_complement-$same_median_complement;
-	print OUT "complement\t";
-	print OUT scalar @complement; #!!!!
-	print OUT "\t";
-	print OUT $same_median_complement."\t"; #median of "same" statistics
-	print OUT $diff_median_complement."\t"; #median of "diff" statistics
-	print OUT $obs_difference_complement."\n";
-	
-	my $diffdiff = $obs_difference_group - $obs_difference_complement;
-	print OUT $diffdiff."\n";
-	
-	
 	my $group_count;
 	my $enrich_count;
 	my $depl_count;
@@ -260,18 +220,20 @@ sub groups_stats_labelshuffler {
 	for (my $t = 0; $t < $iterate; $t++){
 		my @temp = collect_distances($mutmap,"", "shuffle");
 		my @shuffler_bins = @{$temp[0]};
-		my $bootstrap_difference_group = hist_group(\%{$shuffler_bins[1]}, \@group, $average)-hist_group(\%{$shuffler_bins[0]}, \@group, $average);
-		my $bootstrap_difference_complement = hist_group(\%{$shuffler_bins[1]}, \@complement, $average)-hist_group(\%{$shuffler_bins[0]}, \@complement, $average);	
+		my $bootstrap_difference_group = hist_group(\%{$shuffler_bins[1]}, $group, $average)-hist_group(\%{$shuffler_bins[0]}, $group, $average);
+		my $bootstrap_difference_complement = hist_group(\%{$shuffler_bins[1]}, $complement, $average)-hist_group(\%{$shuffler_bins[0]}, $complement, $average);	
 		if ($bootstrap_difference_group >= $obs_difference_group){$group_count++;}
 		if ($bootstrap_difference_group-$bootstrap_difference_complement >= $diffdiff){$enrich_count++;}
 		if ($bootstrap_difference_group-$bootstrap_difference_complement <= $diffdiff){$depl_count++;}
 	}
 	
-	print OUT "group pvalue ".$group_count/$iterate."\n";
-	print OUT "enrichment pvalue ".$enrich_count/$iterate."\n";
-	print OUT "depletion pvalue ".$depl_count/$iterate."\n";
+	open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
+	print OUT "group pvalue\t".$group_count/$iterate."\n";
+	print OUT "enrichment pvalue\t".$enrich_count/$iterate."\n";
+	print OUT "depletion pvalue\t".$depl_count/$iterate."\n";
 	close OUT;
 }
+
 
 ## bootstrap: randomly chooses group of sites
 sub groups_stats_siteshuffler {
@@ -280,44 +242,11 @@ sub groups_stats_siteshuffler {
 	my $groupname = shift;
 	my @group = @{$_[0]};
 	my $average = $_[1];
-	my @array_of_sites = (1..$mutmap->{static_length});
 	
-	my $tree = $mutmap->{static_tree};
-	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
-	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
-
 	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_siteshuffler_".$groupname."_".$average);	
-	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 
-	my @complement = array_diff(@array_of_sites, @group);
-	my @temp = collect_distances($mutmap);
-	my @bins = @{$temp[0]};
-	my @meaningful_sites = @{$temp[1]};
-	
-	print OUT "site\tsame_$average\tdiff_$average\t".$average."_difference\tpvalue\n";
-	
-	my $same_median_group = hist_group(\%{$bins[0]}, \@group, $average);
-	my $diff_median_group = hist_group(\%{$bins[1]}, \@group, $average);
-	my $obs_difference_group = $diff_median_group-$same_median_group;
-	print OUT "\t same $average \t diff $average \t difference\n";
-	print OUT "group\t";
-	print OUT $same_median_group."\t"; #this have to be the median of "same" statistics
-	print OUT $diff_median_group."\t"; #this have to be the median of "diff" statistics
-	print OUT $obs_difference_group."\n";
-	
-	my $same_median_complement = hist_group(\%{$bins[0]}, \@complement, $average);
-	my $diff_median_complement = hist_group(\%{$bins[1]}, \@complement, $average);
-	my $obs_difference_complement = $diff_median_complement-$same_median_complement;
-	print OUT "complement\t";
-	print OUT $same_median_complement."\t"; #this have to be the median of "same" statistics
-	print OUT $diff_median_complement."\t"; #this have to be the median of "diff" statistics
-	print OUT $obs_difference_complement."\n";
-	
-	my $diffdiff = $obs_difference_group - $obs_difference_complement;
-	print OUT $diffdiff."\n";
-	
-	#my @bootstrap_median_diff_group;
-	#my @bootstrap_median_diff_complement;
+	my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_stats($mutmap, \@group, $average, $outfile);
+	my @meaningful_sites = (@{$group}, @{$complement});
 	my $counter1 = 0;
 	my $counter2 = 0;
 	my $counter3 = 0;
@@ -327,12 +256,12 @@ sub groups_stats_siteshuffler {
 
 	for (my $t = 0; $t < $iterate; $t++){
 		my @bootstrap_group = shuffle @meaningful_sites;
-		my @bootstrap_complement = splice (@bootstrap_group, scalar @group, scalar @meaningful_sites - scalar @group);
+		my @bootstrap_complement = splice (@bootstrap_group, scalar @{$group}, scalar @meaningful_sites - scalar @{$group});
 		
-		my $same_median_group = hist_group(\%{$bins[0]}, \@bootstrap_group, $average);
-		my $diff_median_group = hist_group(\%{$bins[1]}, \@bootstrap_group, $average);
-		my $same_median_complement = hist_group(\%{$bins[0]}, \@bootstrap_complement, $average);
-		my $diff_median_complement = hist_group(\%{$bins[1]}, \@bootstrap_complement, $average);
+		my $same_median_group = hist_group(\%{$bins->[0]}, \@bootstrap_group, $average);
+		my $diff_median_group = hist_group(\%{$bins->[1]}, \@bootstrap_group, $average);
+		my $same_median_complement = hist_group(\%{$bins->[0]}, \@bootstrap_complement, $average);
+		my $diff_median_complement = hist_group(\%{$bins->[1]}, \@bootstrap_complement, $average);
 
 		if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $diffdiff){
 			$counter5++;
@@ -355,10 +284,54 @@ sub groups_stats_siteshuffler {
 		}
 	}
 	
-	print OUT "pvalue e  ".$counter1/$iterate." pvalue enrichment  ".$counter2/$iterate."\n"; 
-	print OUT "pvalue d ".$counter3/$iterate." pvalue depletion ".$counter4/$iterate."\n";
-	print OUT "pvalue diffdiff enrichment ".$counter5/$iterate." pvalue diffdiff depletion ".$counter6/$iterate."\n";
+	open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";	
+	print OUT "pvalue e\t".$counter1/$iterate."\tpvalue enrichment\t".$counter2/$iterate."\n"; 
+	print OUT "pvalue d\t".$counter3/$iterate."\tpvalue depletion\t".$counter4/$iterate."\n";
+	print OUT "pvalue diffdiff enrichment\t".$counter5/$iterate."\tpvalue diffdiff depletion\t".$counter6/$iterate."\n";
 	close OUT;
+}
+
+sub group_stats {
+	my $mutmap = shift;
+	my @group = @{$_[0]};
+	my $average = $_[1];
+	my $outfile = $_[2];
+
+	my @array_of_sites = (1..$mutmap->{static_length});
+	my @complement = array_diff(@array_of_sites, @group);
+	my @temp = collect_distances($mutmap);
+	my @bins = @{$temp[0]};
+	my @meaningful_sites = @{$temp[1]};
+	my @group = intersect(@group, @meaningful_sites);
+	my @complement = intersect(@complement, @meaningful_sites);
+	
+	open OUT, ">$outfile" or die "Cannot open $outfile: $!";
+	
+	my $same_median_group = hist_group(\%{$bins[0]}, \@group, $average);
+	my $diff_median_group = hist_group(\%{$bins[1]}, \@group, $average);
+	my $obs_difference_group = $diff_median_group-$same_median_group;
+	print OUT "\tsize\tsame $average\tdiff $average\tdifference\n";
+	print OUT "group\t";
+	print OUT scalar @group;
+	print OUT "\t";
+	print OUT $same_median_group."\t"; #this have to be the median of "same" statistics
+	print OUT $diff_median_group."\t"; #this have to be the median of "diff" statistics
+	print OUT $obs_difference_group."\n";
+	
+	my $same_median_complement = hist_group(\%{$bins[0]}, \@complement, $average);
+	my $diff_median_complement = hist_group(\%{$bins[1]}, \@complement, $average);
+	my $obs_difference_complement = $diff_median_complement-$same_median_complement;
+	print OUT "complement\t";
+	print OUT scalar @complement;
+	print OUT "\t";
+	print OUT $same_median_complement."\t"; #this have to be the median of "same" statistics
+	print OUT $diff_median_complement."\t"; #this have to be the median of "diff" statistics
+	print OUT $obs_difference_complement."\n";
+	
+	my $diffdiff = $obs_difference_group - $obs_difference_complement;
+	print OUT "diffdiff\t".$diffdiff."\n";
+	close OUT;
+	return ($diffdiff, $obs_difference_group, $obs_difference_complement, \@group, \@complement, \@bins);
 }
 
 

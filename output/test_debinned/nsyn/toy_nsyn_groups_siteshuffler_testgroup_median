@@ -1,8 +1,7 @@
-site	same_median	diff_median	median_difference	pvalue
-	 same median 	 diff median 	 difference
-group	0.039646	0.044765	0.005119
-complement	0.046568	0.046839	0.000271
-0.004848
-pvalue e  0.22 pvalue enrichment  0.11
-pvalue d 0.78 pvalue depletion 0.56
-pvalue diffdiff enrichment 0.42 pvalue diffdiff depletion 0.58
+	size	same median	diff median	difference
+group	2	0.039646	0.044765	0.005119
+complement	4	0.046568	0.046839	0.000271
+diffdiff	0.004848
+pvalue e	0.37	pvalue enrichment	0.16
+pvalue d	0.72	pvalue depletion	0.58
+pvalue diffdiff enrichment	0.35	pvalue diffdiff depletion	0.74
