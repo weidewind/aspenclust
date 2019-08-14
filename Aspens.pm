@@ -138,7 +138,7 @@ sub logic_median_statistics {
 	my $iterate = shift;
 	my $sites = shift;
 	
-	unless ($sites) $sites = [1..566];
+	$sites = [1..566] unless ($sites);
 	
 	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
