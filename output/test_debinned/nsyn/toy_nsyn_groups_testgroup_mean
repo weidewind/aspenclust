@@ -1,0 +1,8 @@
+site	same_mean	diff_mean	mean_difference	pvalue
+	 same mean 	 diff mean 	 difference
+group	0.0336963005891777	0.0427531609195402	0.00905686033036249
+complement	0.0753639199589385	0.0856772968431934	0.0103133768842549
+-0.00125651655389242
+pvalue e  0.54 pvalue enrichment  0.54
+pvalue d 0.46 pvalue depletion 0.46
+pvalue diffdiff enrichment 0.54 pvalue diffdiff depletion 0.46
