@@ -15,11 +15,11 @@ use Time::HiRes qw( clock );
 use Parsers;
 
 
-my $args = {protein => "toy", state => "nsyn", bigtag => "test_debinned"};
+my $args = {protein => "h1", state => "nsyn", bigtag => "test_debinned"};
 my $mutmap = ProbsMutmap->new($args);
 
 my $time0 = clock();
-Aspens::global_stats($mutmap, 0.00005, 100);
+Aspens::global_stats($mutmap, 0.00005, 100, "mean");
 my $timedone = clock();
 my $exectime = $timedone-$time0;
 print "Done in $exectime";

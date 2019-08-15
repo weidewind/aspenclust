@@ -68,6 +68,7 @@ sub global_stats{
 	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 	my @bootstrap_median_diff;
 	
+	print "collecting distances\n";
 	my @temp = collect_distances($mutmap, "merge");
 	my @bins = @{$temp[0]};
 
