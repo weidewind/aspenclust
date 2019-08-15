@@ -2,6 +2,6 @@
 group	2	0.039646	0.044765	0.005119
 complement	4	0.046568	0.046839	0.000271
 diffdiff	0.004848
-pvalue e	0.37	pvalue enrichment	0.16
-pvalue d	0.72	pvalue depletion	0.58
-pvalue diffdiff enrichment	0.35	pvalue diffdiff depletion	0.74
+pvalue e	0.34	pvalue enrichment	0.07
+pvalue d	0.7	pvalue depletion	0.61
+pvalue diffdiff enrichment	0.3	pvalue diffdiff depletion	0.74

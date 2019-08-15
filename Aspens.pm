@@ -70,20 +70,10 @@ sub global_stats{
 	
 	my @temp = collect_distances($mutmap, "merge");
 	my @bins = @{$temp[0]};
-	
-	# print OUT "Same\n";
-	# my @intervals = sort(uniq(keys %{$bins[0]}, keys %{$bins[1]}))
-	# foreach my $interval( @intervals){
-		# print OUT $interval."\t".$bins[0]->[$interval]."\n";
-	# }
-	# print OUT "Different\n";
-	# foreach my $interval( @intervals){
-		# print OUT $interval."\t".$bins[1]->[$interval]."\n";
-	# }
+
 	my $same_median = hist_average(\%{$bins[0]},$average);
 	my $diff_median = hist_average(\%{$bins[1]}, $average);
 	my $obs_difference = $diff_median-$same_median;
-
 	
 	my @bootstrap_median_diff;
 	for (my $t = 0; $t < $iterate; $t++){
@@ -113,7 +103,6 @@ sub global_stats{
 	print OUT $pvalue."\n";
 	close OUT;
 }
-
 
 
 # analyze sites
@@ -146,12 +135,9 @@ sub single_sites_stats {
 			print OUT (Dumper(\%distr));
 			print OUT "node,anc,der,prob\n";
 			foreach my $node (@{$nodes_with_sub{$ind}}){
-				my @sorted =  sort { $b->{"Substitution::probability"} <=> $a->{"Substitution::probability"} } 
-@{$subs_on_node{${$node}->get_name()}->{$ind}};
+				my @sorted =  sort { $b->{"Substitution::probability"} <=> $a->{"Substitution::probability"} } @{$subs_on_node{${$node}->get_name()}->{$ind}};
 				foreach my $sub(@sorted){
-					print OUT 
-${$node}->get_name().",".$sub->{"Substitution::ancestral_allele"}.",".$sub->{"Substitution::derived_allele"}.",".$sub->{"Substitution::pr
-obability"}."\n";
+					print OUT ${$node}->get_name().",".$sub->{"Substitution::ancestral_allele"}.",".$sub->{"Substitution::derived_allele"}.",".$sub->{"Substitution::probability"}."\n";
 				}
 			}
 		}
