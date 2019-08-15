@@ -20,11 +20,13 @@ my $tag = "refactor";
 
 ## todo: can be rewritten for efficient computation of both types of stats
 my $time0 = clock();
-Aspens::groups_stats_labelshuffler($mutmap, 100, $tag, [1,2,3], "mean");
-Aspens::groups_stats_labelshuffler($mutmap, 100, $tag, [1,2,3], "median");
-Aspens::groups_stats_siteshuffler($mutmap, 100, $tag, [1,2,3], "median");
-Aspens::groups_stats_siteshuffler($mutmap, 100, $tag, [1,2,3], "mean");
-my $timedone = clock();
-my $exectime = $timedone-$time0;
-print "Done in $exectime";
+Aspens::groups_stats_labelshuffler($mutmap, 500, $tag, [1,2,3], "mean");
+Aspens::groups_stats_labelshuffler($mutmap, 500, $tag, [1,2,3], "median");
+my $timedone1 = clock();
+Aspens::groups_stats_siteshuffler($mutmap, 500, $tag, [1,2,3], "median");
+Aspens::groups_stats_siteshuffler($mutmap, 500, $tag, [1,2,3], "mean");
+my $timedone2 = clock();
+my $exectime1 = $timedone1-$time0;
+my $exectime2 = $timedone2-$timedone1;
+print "Done in $exectime1 $timedone2";
 
