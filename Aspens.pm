@@ -345,7 +345,7 @@ sub find_all_distances_probs {
 	# collect nodes with substitutions from a certain allele
 	#print Dumper(\@nodes);
 
-	## todo: o(nmuts) for every iteration, cash it?
+	## cashed in ref2 branch with almost no effect on running time
 	foreach my $node (@nodes){
 		foreach my $sub(@{$subs_on_node{${$node}->get_name()}->{$site_index}}){
 				my $ancestor = $sub->{"Substitution::ancestral_allele"}; 

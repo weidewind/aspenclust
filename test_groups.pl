@@ -28,5 +28,5 @@ Aspens::groups_stats_siteshuffler($mutmap, 500, $tag, [1,2,3], "mean");
 my $timedone2 = clock();
 my $exectime1 = $timedone1-$time0;
 my $exectime2 = $timedone2-$timedone1;
-print "Done in $exectime1 $timedone2";
+print "Done in $exectime1 $exectime2";
 
