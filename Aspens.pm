@@ -333,31 +333,36 @@ sub find_all_distances_probs {
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
 	my %hash;
 	return %hash unless ($mutmap->{static_nodes_with_sub}{$site_index});
-	my @nodes = @{$mutmap->{static_nodes_with_sub}{$site_index}};
+	if (exists $mutmap->{static_all_distances_probs}{$site_index}){
+		return %{$mutmap->{static_all_distances_probs}{$site_index}} unless $shuffle;
+	}
 	
+	my @nodes = @{$mutmap->{static_nodes_with_sub}{$site_index}};
 	my @distances_same;
 	my @distances_diff;
 	my $myCodonTable   = Bio::Tools::CodonTable->new();
 	my %hash_of_nodes;
 	# collect nodes with substitutions from a certain allele
-#print Dumper(\@nodes);
+	#print Dumper(\@nodes);
+
+	## todo: o(nmuts) for every iteration, cash it?
 	foreach my $node (@nodes){
 		foreach my $sub(@{$subs_on_node{${$node}->get_name()}->{$site_index}}){
 				my $ancestor = $sub->{"Substitution::ancestral_allele"}; 
 				$hash_of_nodes{$ancestor}{${$node}->get_name()} = $node;
 			}
 	}
-#print ("site $site_index\n");	
-#print Dumper(\%hash_of_nodes);
+	#print ("site $site_index\n");	
+	#print Dumper(\%hash_of_nodes);
 	foreach my $ancestor (keys %hash_of_nodes){
-#print $ancestor."\n";	
+	#print $ancestor."\n";	
 		my @nodes_subset =  values %{$hash_of_nodes{$ancestor}};
 		my @shuffled;
 		if ($shuffle) {@shuffled = shuffle @nodes_subset;}
 		else {@shuffled = @nodes_subset;}
 		for (my $i = 0; $i < scalar @nodes_subset; $i++){
-#print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
-#print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
+		#print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
+		#print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
 			foreach my $sub1 (@{$subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}}){
 					next if $sub1->{"Substitution::ancestral_allele"} ne $ancestor; 
 					my $weight1 = $sub1->{"Substitution::probability"};
@@ -366,23 +371,17 @@ sub find_all_distances_probs {
 					my $count_diff;
 					my $count_same_pairs;
 					my $count_diff_pairs;
-#print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
+					#print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
 					for (my $j = 0; $j < scalar @nodes_subset; $j++){
 						if ($j == $i){ next; }
-					#	if (value_is_in_array(${$shuffled[$j]}, \@{ ${$shuffled[$i]}->get_sisters })){ #!
-					#		next; 
-					#	}
 							foreach my $sub2 (@{$subs_on_node{${$nodes_subset[$j]}->get_name()}{$site_index}}){
 								next if $sub2->{"Substitution::ancestral_allele"} ne $ancestor;
 								my $weight2 = $sub2->{"Substitution::probability"};
 								my $derived2 = ($sub2->{"Substitution::derived_allele"});
-
-							#	my $dist = calc_my_distance(${$shuffled[$i]}, ${$shuffled[$j]});
 								my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
 								my $pairweight = pairweight(${$nodes_subset[$j]},${$nodes_subset[$i]}, $sub1, $sub2);
 
-							   # my $dist =  calc_true_patristic_distance(${$shuffled[$i]}, ${$shuffled[$j]});
-#print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
+								#print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
 								if ($pairweight > 0){ # ie these nodes are not sequential; does not work since 02 06 2015
 									if (!exists $hash{"$ancestor$derived1$i"} ){
 										my @same = ();
@@ -405,7 +404,7 @@ sub find_all_distances_probs {
 							}
 
 					}
-#					 print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
+							#print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
 							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_same;
 							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_diff;
 
@@ -413,7 +412,7 @@ sub find_all_distances_probs {
 
 		}
 	}
-
+	$mutmap->set_all_distances_probs(\%hash, $site_index) unless $shuffle;
 	return %hash;		
 }
 

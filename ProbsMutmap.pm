@@ -112,4 +112,11 @@ sub set_same_ancestor_subs{
 	$self->{static_same_ancestor_subs} = \%hash;
 }
 
+sub set_all_distances_probs{
+	my $self = shift;
+	my $hash = shift;
+	my $site_index = shift;
+	$self->{static_all_distances_probs}{$site_index} = $hash;
+}
+
 1;
