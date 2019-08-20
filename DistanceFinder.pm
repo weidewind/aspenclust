@@ -12,7 +12,7 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(get_mrcn calc_true_patristic_distance node_distance); # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(get_mrcn calc_true_patristic_distance node_distance mock_distance); # Symbols to autoexport (:DEFAULT tag)
 
 
 	# sub set_mutmap_distance_matrix {
@@ -66,6 +66,10 @@ $VERSION = 1.00; # Or higher
     	}
     	
     }
+	
+	sub mock_distance {
+		return 1;
+	}
 	
 	## the only difference from calc_patristic_distance is that it uses get_mrcn instead of get_mrca
 ## If you give it two sequential nodes, it returns the distance between them 

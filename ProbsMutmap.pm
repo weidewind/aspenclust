@@ -119,4 +119,13 @@ sub set_all_distances_probs{
 	$self->{static_all_distances_probs}{$site_index} = $hash;
 }
 
+sub pathFinder {
+	my $self = shift;
+	my $args = shift;
+	unless ($args) {return $self ->{static_output_base};}
+	my $path = File::Spec->catdir($self ->{static_output_base}, $args->{norm});
+	make_path($path);
+	return $path;
+}
+
 1;

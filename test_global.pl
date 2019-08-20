@@ -14,12 +14,29 @@ use Time::HiRes qw( clock );
 
 use Parsers;
 
+my $protein = "toy";
+my $state = "nsyn";
+my $simnumber = 100;
+my $norm = "weightnorm"; #weightnorm or countnorm
+my $bigtag = "test";
+my $stattype = "median";
+my $verbose;
 
-my $args = {protein => "h1", state => "nsyn", bigtag => "test_debinned"};
+GetOptions (	
+		'protein=s' => \$protein,
+		'state=s' => \$state,
+		'simnumber=i' => \$simnumber,
+		'norm=s' => \$norm,
+		'bigtag=s' => \$bigtag,
+		'stattype=s' => \$stattype,
+		'verbose' => \$verbose,
+);
+
+my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
 
 my $time0 = clock();
-Aspens::global_stats($mutmap, 0.00005, 100, "mean");
+Aspens::global_stats({mutmap => $mutmap, simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose});
 my $timedone = clock();
 my $exectime = $timedone-$time0;
 print "Done in $exectime";

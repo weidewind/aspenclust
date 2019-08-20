@@ -13,20 +13,44 @@ use Data::Dumper;
 use Time::HiRes qw( clock );
 use Parsers;
 
+my $protein = "toy";
+my $state = "nsyn";
+my $simnumber = 100;
+my $norm = "weightnorm"; #weightnorm or countnorm
+my $bigtag = "test";
+my $stattype = "";
+my $group = "1,2,3,4";
+my $verbose;
 
-my $args = {protein => "toy", state => "nsyn", bigtag => "test_debinned"};
+GetOptions (	
+		'protein=s' => \$protein,
+		'state=s' => \$state,
+		'simnumber=i' => \$simnumber,
+		'norm=s' => \$norm,
+		'bigtag=s' => \$bigtag,
+		'stattype=s' => \$stattype,
+		'verbose' => \$verbose,
+		'group=s' => \$group,
+);
+
+my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
-my $tag = "refactor";
+my @sites = split(",", $group);
 
 ## todo: can be rewritten for efficient computation of both types of stats
 my $time0 = clock();
-Aspens::groups_stats_labelshuffler($mutmap, 500, $tag, [1,2,3], "mean");
-Aspens::groups_stats_labelshuffler($mutmap, 500, $tag, [1,2,3], "median");
+if ($stattype){
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "labelshuffler", simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose, group => \@sites});
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "siteshuffler",simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose, group => \@sites});
+}
+else{
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "labelshuffler",simnumber => $simnumber, stattype => "mean", norm => $norm, verbose => $verbose, group => \@sites});
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "labelshuffler",simnumber => $simnumber, stattype => "median", norm => $norm, verbose => $verbose, group => \@sites});
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "siteshuffler",simnumber => $simnumber, stattype => "mean", norm => $norm, verbose => $verbose, group => \@sites});
+	Aspens::group_stats({mutmap => $mutmap, shuffletype => "siteshuffler",simnumber => $simnumber, stattype => "median", norm => $norm, verbose => $verbose, group => \@sites});
+}
+
 my $timedone1 = clock();
-Aspens::groups_stats_siteshuffler($mutmap, 500, $tag, [1,2,3], "median");
-Aspens::groups_stats_siteshuffler($mutmap, 500, $tag, [1,2,3], "mean");
-my $timedone2 = clock();
-my $exectime1 = $timedone1-$time0;
-my $exectime2 = $timedone2-$timedone1;
-print "Done in $exectime1 $exectime2";
+my $exectime = $timedone1-$time0;
+print "Done in $exectime";
 

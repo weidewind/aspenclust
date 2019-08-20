@@ -5,7 +5,7 @@ package Aspens;
 use strict;
 use Bio::Phylo::IO;
 use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
-use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance);
+use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance mock_distance);
 use Bio::Tools::CodonTable;
 use TreeUtils::Phylo::FigTree;
 use Bio::SeqIO;
@@ -54,35 +54,41 @@ sub print_scheme{
 #global analysis
 
 sub global_stats{
-	my $mutmap = shift;
-	my $step = shift;
-	my $iterate = shift;
-	my $average = shift;
+	my $args = shift;
+	my @names = qw(mutmap simnumber stattype norm verbose);
+	my ($mutmap, $simnumber, $stattype, $normalization, $verbose) = map {$args->{$_}} @names;
 	
 	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
 	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
 
-	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_global_".$average."_statistics");	
+	my $path = $mutmap->pathFinder({norm => $normalization});
+	my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_global_".$stattype."_statistics");	
 	
 	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 	my @bootstrap_median_diff;
 	
 	print "collecting distances\n";
-	my @temp = collect_distances($mutmap, "merge");
+	my @temp = collect_distances({mutmap => $mutmap, merge => "merge", shuffle=>"", norm=>$normalization});
 	my @bins = @{$temp[0]};
+	if ($verbose) {
+		close OUT;
+		my $header = "Histogram\n";
+		print_histogram(\@bins, $outfile, $header);
+		open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
+	}
 
-	my $same_median = hist_average(\%{$bins[0]},$average);
-	my $diff_median = hist_average(\%{$bins[1]}, $average);
+	my $same_median = hist_average(\%{$bins[0]},$stattype);
+	my $diff_median = hist_average(\%{$bins[1]}, $stattype);
 	my $obs_difference = $diff_median-$same_median;
 	
 	my @bootstrap_median_diff;
-	for (my $t = 0; $t < $iterate; $t++){
+	for (my $t = 0; $t < $simnumber; $t++){
 	    print "shuffling $t\n";
-		my @temp = collect_distances($mutmap, "merge", "shuffle",);
+		my @temp = collect_distances({mutmap => $mutmap, merge => "merge", shuffle=>"shuffle", norm=>$normalization});
 		my @shuffler_bins = @{$temp[0]};
-		my $shd = hist_average(\%{$shuffler_bins[1]}, $average);
-		my $shs = hist_average(\%{$shuffler_bins[0]}, $average);
+		my $shd = hist_average(\%{$shuffler_bins[1]}, $stattype);
+		my $shs = hist_average(\%{$shuffler_bins[0]}, $stattype);
 		my $diff = $shd-$shs;
 		print OUT "boot $shd $shs $diff \n";
 		push @bootstrap_median_diff, $diff;
@@ -90,39 +96,35 @@ sub global_stats{
 	
 	my @sorted_bootstrap = sort {$a <=> $b} @bootstrap_median_diff;
 	my $pvalue = 0;
-	for (my $i = 0; $i < $iterate; $i++){
+	for (my $i = 0; $i < $simnumber; $i++){
 		if($sorted_bootstrap[$i] >= $obs_difference){
-			$pvalue = ($iterate - $i)/$iterate;
+			$pvalue = ($simnumber - $i)/$simnumber;
 			last;
 		}
 	}
-	print OUT "same_$average\tdiff_$average\t".$average."_difference\tpvalue\n";
+	print OUT "same_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";
 	print OUT ">\t";
 	print OUT $same_median."\t"; #this have to be the median of "same" statistics
 	print OUT $diff_median."\t"; #this have to be the median of "diff" statistics
 	print OUT $obs_difference."\t";
 	print OUT $pvalue."\n";
 	close OUT;
+	return $outfile;
 }
 
 
 # analyze sites
 sub single_sites_stats {
-	my $mutmap = shift;
-	my $step = shift;
-	my $iterate = shift;
-	my $sites = shift;
-	my $verbose = shift;
-	my $average = shift;
+	my $args = shift;
+	my @names = qw(mutmap simnumber sites verbose stattype norm);
+	my ($mutmap, $simnumber, $sites, $verbose, $stattype, $norm) = map {$args->{$_}} @names;
 	
 	$sites = [1..$mutmap->{static_length}] unless ($sites) ;
-	
-	my $tree = $mutmap->{static_tree};
 	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
 	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
 
-	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_sites_".$average."_statistics");	
-	
+	my $path = $mutmap->pathFinder({norm => $norm});
+	my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_sites_".$stattype."_statistics");	
 	open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
 	my @bootstrap_median_diff;
 
@@ -146,31 +148,34 @@ sub single_sites_stats {
 		foreach my $k (keys %distr){
 			print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n"; # distr{$anc$der$num}[2] = (same, diff)
 		}
-		my @bins = distr_to_stathist_probs(\%distr);
+		
+		my @bins = distr_to_stathist_probs(\%distr, $norm); 
 		if ($verbose) {
-			print OUT "Output from distr_to_stathist_probs : {interval-> weighted same}, {interval-> weighted diff}\n";
-			print OUT (Dumper(\@bins));
+			close OUT;
+			my $header = "Histogram for site $ind\n";
+			print_histogram(\@bins, $outfile, $header);
+			open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
 		}
-		my $same_median = hist_average(\%{$bins[0]}, $average);
-		my $diff_median = hist_average(\%{$bins[1]}, $average);
+		my $same_median = hist_average(\%{$bins[0]}, $stattype);
+		my $diff_median = hist_average(\%{$bins[1]}, $stattype);
 		my $obs_difference = $diff_median-$same_median;
-		print OUT ">same_$average\tdiff_$average\t".$average."_difference\tpvalue\n";
+		print OUT ">same_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";
 		print OUT $ind."\t";
 		print OUT $same_median."\t"; #this have to be the median of "same" statistics
 		print OUT $diff_median."\t"; #this have to be the median of "diff" statistics
 		print OUT $obs_difference."\t";
 		
-		for (my $t = 0; $t < $iterate; $t++){
+		for (my $t = 0; $t < $simnumber; $t++){
 			my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
-			my @shuffler_bins = distr_to_stathist_probs(\%shuffled_distr);
-			push @bootstrap_median_diff, hist_average(\%{$shuffler_bins[1]}, $average)-hist_average(\%{$shuffler_bins[0]}, $average);
+			my @shuffler_bins = distr_to_stathist_probs(\%shuffled_distr, $norm);
+			push @bootstrap_median_diff, hist_average(\%{$shuffler_bins[1]}, $stattype)-hist_average(\%{$shuffler_bins[0]}, $stattype);
 		}
 		
 		my @sorted_bootstrap = sort {$a <=> $b} @bootstrap_median_diff;
 		my $pvalue = 0;
-		for (my $i = 0; $i < $iterate; $i++){
+		for (my $i = 0; $i < $simnumber; $i++){
 			if($sorted_bootstrap[$i] >= $obs_difference){
-				$pvalue = ($iterate - $i)/$iterate;
+				$pvalue = ($simnumber - $i)/$simnumber;
 				last;
 			}
 		}
@@ -181,6 +186,7 @@ sub single_sites_stats {
 		print OUT "\n";
 		}
 	close OUT;
+	return $outfile;
 }
 
 # for each interval prints two numbers (for each substitution, i.e. same ancestor and same derived aa or codon): observed number of convergent mutations 
@@ -190,123 +196,127 @@ sub single_sites_stats {
 
 
 ## bootstrap: standard shuffler, shuffles labels on sites
-sub groups_stats_labelshuffler {
-	my $mutmap = shift;
-	my $iterate = shift;
-	my $groupname = shift;
-	my @group = @{$_[0]};
-	my $average = $_[1]; #mean or median
-
-	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_labelshuffler_".$groupname."_".$average);	
-	my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_stats($mutmap, \@group, $average, $outfile);
-
-	my $group_count;
-	my $enrich_count;
-	my $depl_count;
-	
-	for (my $t = 0; $t < $iterate; $t++){
-		my @temp = collect_distances($mutmap,"", "shuffle");
-		my @shuffler_bins = @{$temp[0]};
-		my $bootstrap_difference_group = hist_group(\%{$shuffler_bins[1]}, $group, $average)-hist_group(\%{$shuffler_bins[0]}, $group, $average);
-		my $bootstrap_difference_complement = hist_group(\%{$shuffler_bins[1]}, $complement, $average)-hist_group(\%{$shuffler_bins[0]}, $complement, $average);	
-		if ($bootstrap_difference_group >= $obs_difference_group){$group_count++;}
-		if ($bootstrap_difference_group-$bootstrap_difference_complement >= $diffdiff){$enrich_count++;}
-		if ($bootstrap_difference_group-$bootstrap_difference_complement <= $diffdiff){$depl_count++;}
-	}
-	
-	open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
-	print OUT "group pvalue\t".$group_count/$iterate."\n";
-	print OUT "enrichment pvalue\t".$enrich_count/$iterate."\n";
-	print OUT "depletion pvalue\t".$depl_count/$iterate."\n";
-	close OUT;
-}
-
-
-## bootstrap: randomly chooses group of sites
-sub groups_stats_siteshuffler {
-	my $mutmap = shift;
-	my $iterate = shift;
-	my $groupname = shift;
-	my @group = @{$_[0]};
-	my $average = $_[1];
-	
-	my $outfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_siteshuffler_".$groupname."_".$average);	
-
-	my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_stats($mutmap, \@group, $average, $outfile);
-	my @meaningful_sites = (@{$group}, @{$complement});
-	my $counter1 = 0;
-	my $counter2 = 0;
-	my $counter3 = 0;
-	my $counter4 = 0;
-	my $counter5;
-	my $counter6;
-
-	for (my $t = 0; $t < $iterate; $t++){
-		my @bootstrap_group = shuffle @meaningful_sites;
-		my @bootstrap_complement = splice (@bootstrap_group, scalar @{$group}, scalar @meaningful_sites - scalar @{$group});
-		
-		my $same_median_group = hist_group(\%{$bins->[0]}, \@bootstrap_group, $average);
-		my $diff_median_group = hist_group(\%{$bins->[1]}, \@bootstrap_group, $average);
-		my $same_median_complement = hist_group(\%{$bins->[0]}, \@bootstrap_complement, $average);
-		my $diff_median_complement = hist_group(\%{$bins->[1]}, \@bootstrap_complement, $average);
-
-		if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $diffdiff){
-			$counter5++;
-		}
-		if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement <= $diffdiff){
-			$counter6++;
-		}
-		if ($diff_median_group-$same_median_group >= $obs_difference_group){ 
-			$counter1++;
-			if ($diff_median_complement-$same_median_complement <= $obs_difference_complement){
-				$counter2++;
-			}
-		}
-		
-		if ($diff_median_group-$same_median_group <= $obs_difference_group){ 
-			$counter3++;
-			if ($diff_median_complement-$same_median_complement >= $obs_difference_complement){
-				$counter4++;
-			}
-		}
-	}
-	
-	open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";	
-	print OUT "pvalue e\t".$counter1/$iterate."\tpvalue enrichment\t".$counter2/$iterate."\n"; 
-	print OUT "pvalue d\t".$counter3/$iterate."\tpvalue depletion\t".$counter4/$iterate."\n";
-	print OUT "pvalue diffdiff enrichment\t".$counter5/$iterate."\tpvalue diffdiff depletion\t".$counter6/$iterate."\n";
-	close OUT;
-}
-
 sub group_stats {
-	my $mutmap = shift;
-	my @group = @{$_[0]};
-	my $average = $_[1];
-	my $outfile = $_[2];
+	my $args = shift;
+	my @names = qw(mutmap shuffletype simnumber groupname group stattype norm outfile verbose);
+	my ($mutmap, $shuffletype, $simnumber, $groupname, $group,  $stattype, $norm, $outfile, $verbose) = map {$args->{$_}} @names;
+	
+	my $path = $mutmap->pathFinder({norm => $norm});
+	my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_".$shuffletype."_".$groupname."_".$stattype);	
+	my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_realstats({mutmap=>$mutmap, group=>$group, stattype=>$stattype, norm => $norm, verbose=> $verbose,outfile=>$outfile});
+
+	if ($shuffletype eq "labelshuffler"){
+		my $group_count;
+		my $enrich_count;
+		my $depl_count;
+		
+		for (my $t = 0; $t < $simnumber; $t++){
+			my @temp = collect_distances({mutmap => $mutmap, shuffle=>"shuffle", norm=>$norm});
+			my @shuffler_bins = @{$temp[0]};
+			my $bootstrap_difference_group = hist_group_average(\%{$shuffler_bins[1]}, $group, $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $group, $stattype);
+			my $bootstrap_difference_complement = hist_group_average(\%{$shuffler_bins[1]}, $complement, $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $complement, $stattype);	
+			if ($bootstrap_difference_group >= $obs_difference_group){$group_count++;}
+			if ($bootstrap_difference_group-$bootstrap_difference_complement >= $diffdiff){$enrich_count++;}
+			if ($bootstrap_difference_group-$bootstrap_difference_complement <= $diffdiff){$depl_count++;}
+		}
+		
+		open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
+		print OUT "group pvalue\t".$group_count/$simnumber."\n";
+		print OUT "enrichment pvalue\t".$enrich_count/$simnumber."\n";
+		print OUT "depletion pvalue\t".$depl_count/$simnumber."\n";
+	}
+	elsif ($shuffletype eq "siteshuffler"){
+		my @meaningful_sites = (@{$group}, @{$complement});
+		my $counter1;
+		my $counter2;
+		my $counter3;
+		my $counter4;
+		my $counter5;
+		my $counter6;
+
+		for (my $t = 0; $t < $simnumber; $t++){
+			my @bootstrap_group = shuffle @meaningful_sites;
+			my @bootstrap_complement = splice (@bootstrap_group, scalar @{$group}, scalar @meaningful_sites - scalar @{$group});
+			
+			my $same_median_group = hist_group_average(\%{$bins->[0]}, \@bootstrap_group, $stattype);
+			my $diff_median_group = hist_group_average(\%{$bins->[1]}, \@bootstrap_group, $stattype);
+			my $same_median_complement = hist_group_average(\%{$bins->[0]}, \@bootstrap_complement, $stattype);
+			my $diff_median_complement = hist_group_average(\%{$bins->[1]}, \@bootstrap_complement, $stattype);
+
+			if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $diffdiff){
+				$counter5++;
+			}
+			if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement <= $diffdiff){
+				$counter6++;
+			}
+			if ($diff_median_group-$same_median_group >= $obs_difference_group){ 
+				$counter1++;
+				if ($diff_median_complement-$same_median_complement <= $obs_difference_complement){
+					$counter2++;
+				}
+			}
+			
+			if ($diff_median_group-$same_median_group <= $obs_difference_group){ 
+				$counter3++;
+				if ($diff_median_complement-$same_median_complement >= $obs_difference_complement){
+					$counter4++;
+				}
+			}
+		}
+		
+		open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";	
+		print OUT "pvalue e\t".$counter1/$simnumber."\tpvalue enrichment\t".$counter2/$simnumber."\n"; 
+		print OUT "pvalue d\t".$counter3/$simnumber."\tpvalue depletion\t".$counter4/$simnumber."\n";
+		print OUT "pvalue diffdiff enrichment\t".$counter5/$simnumber."\tpvalue diffdiff depletion\t".$counter6/$simnumber."\n";
+	}
+	else {die "Unknown group shuffler type $shuffletype";}
+	close OUT;
+	return $outfile;
+}
+
+
+
+sub group_realstats {
+	my $args = shift;
+	my @names = qw(mutmap group verbose stattype norm outfile);
+	my ($mutmap, $group, $verbose, $stattype, $norm, $outfile) = map {$args->{$_}} @names;
 
 	my @array_of_sites = (1..$mutmap->{static_length});
-	my @complement = array_diff(@array_of_sites, @group);
-	my @temp = collect_distances($mutmap);
+	my @complement = array_diff(@array_of_sites, @{$group});
+	my @temp = collect_distances({mutmap => $mutmap, norm => $norm});
 	my @bins = @{$temp[0]};
 	my @meaningful_sites = @{$temp[1]};
-	my @group = intersect(@group, @meaningful_sites);
+	my @group = intersect(@{$group}, @meaningful_sites);
 	my @complement = intersect(@complement, @meaningful_sites);
 	
-	open OUT, ">$outfile" or die "Cannot open $outfile: $!";
+	my @groupbins = splicebins(\@bins, \@group);
+	my @complbins = splicebins(\@bins, \@complement);
 	
-	my $same_median_group = hist_group(\%{$bins[0]}, \@group, $average);
-	my $diff_median_group = hist_group(\%{$bins[1]}, \@group, $average);
+	open OUT, ">$outfile" or die "Cannot open $outfile: $!";
+	if ($verbose) {
+		close OUT;
+		my $header = "Histogram for group\n";
+		print_histogram(\@groupbins, $outfile, $header);
+		$header = "Histogram for complement\n";
+		print_histogram(\@complbins, $outfile, $header);
+		open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
+	}
+	#my $same_median_group = hist_group_average(\%{$bins[0]}, \@group, $stattype);
+	#my $diff_median_group = hist_group_average(\%{$bins[1]}, \@group, $stattype);
+	my $same_median_group = hist_average(\%{$groupbins[0]},  $stattype);
+	my $diff_median_group = hist_average(\%{$groupbins[1]},  $stattype);
 	my $obs_difference_group = $diff_median_group-$same_median_group;
-	print OUT "\tsize\tsame $average\tdiff $average\tdifference\n";
+	print OUT "\tsize\tsame $stattype\tdiff $stattype\tdifference\n";
 	print OUT "group\t";
 	print OUT scalar @group;
 	print OUT "\t";
 	print OUT $same_median_group."\t"; #this have to be the median of "same" statistics
 	print OUT $diff_median_group."\t"; #this have to be the median of "diff" statistics
 	print OUT $obs_difference_group."\n";
-	
-	my $same_median_complement = hist_group(\%{$bins[0]}, \@complement, $average);
-	my $diff_median_complement = hist_group(\%{$bins[1]}, \@complement, $average);
+		# my $same_median_complement = hist_group_average(\%{$bins[0]}, \@complement, $stattype);
+	# my $diff_median_complement = hist_group_average(\%{$bins[1]}, \@complement, $stattype);
+	my $same_median_complement = hist_average(\%{$complbins[0]}, $stattype);
+	my $diff_median_complement = hist_average(\%{$complbins[1]}, $stattype);
 	my $obs_difference_complement = $diff_median_complement-$same_median_complement;
 	print OUT "complement\t";
 	print OUT scalar @complement;
@@ -441,6 +451,8 @@ sub value_is_in_array{
 #weights!)
 sub distr_to_stathist_probs {
 		my %distr = %{$_[0]};
+		my $normalization = $_[1];
+		unless ($normalization) {$normalization = "weightnorm";}
 		my @bins;
 		my %hash;
 		my %pruned_distr;
@@ -467,15 +479,23 @@ sub distr_to_stathist_probs {
 					my %dtemp;
 					my $d_weights_sum;
 					my $s_weights_sum;
-					foreach my $s_distance_weight (@{$pruned_distr{$subst}->[0]}){
-						my $b = $s_distance_weight->[0];
-						$stemp{$b} = $stemp{$b}+$s_distance_weight->[1];						
-						$s_weights_sum +=$s_distance_weight->[1];		
+					foreach my $s_dist_and_weight (@{$pruned_distr{$subst}->[0]}){
+						my $d = $s_dist_and_weight->[0];
+						$stemp{$d} = $stemp{$d}+$s_dist_and_weight->[1];
+						switch ($normalization){
+							case "weightnorm" {$s_weights_sum +=$s_dist_and_weight->[1]}
+							case "countnorm" {$s_weights_sum +=1}
+							else {die "Normalization option $normalization unknown"}
+						}	
 					}
-					foreach my $d_distance_weight (@{$pruned_distr{$subst}->[1]}){
-						my $b = $d_distance_weight->[0];
-						$dtemp{$b} = $dtemp{$b}+$d_distance_weight->[1];								
-						$d_weights_sum +=$d_distance_weight->[1];
+					foreach my $d_dist_and_weight (@{$pruned_distr{$subst}->[1]}){
+						my $d = $d_dist_and_weight->[0];
+						$dtemp{$d} = $dtemp{$d}+$d_dist_and_weight->[1];								
+						switch ($normalization){
+							case "weightnorm" {$d_weights_sum +=$d_dist_and_weight->[1]}
+							case "countnorm" {$d_weights_sum +=1}
+							else {die "Normalization option $normalization unknown"}
+						}	
 					}
 					#print "Printing unique distances\n";
 					my @alldists = uniq(keys %stemp, keys %dtemp); 
@@ -487,26 +507,19 @@ sub distr_to_stathist_probs {
 
 		}
 
-# for ( my $i  = 0; $i < scalar @{$bins[0]}; $i++){
-# print "interval $i s ".$bins[0]->{$i}."\n" if $bins[0]->{$i}>0;
-# }
-# for ( my $i  = 0; $i < scalar @{$bins[1]}; $i++){
-# print "interval $i d ".$bins[1]->{$i}."\n" if $bins[1]->{$i}>0;
-# }
 		return @bins;
 }
 
-
 sub collect_distances{
-	my $mutmap = shift;
-	my $merge = shift;
-	my $shuffle = shift;
+	my $args = shift;
+	my @names = qw(mutmap merge shuffle norm);
+	my ($mutmap, $merge, $shuffle, $normalization) = map {$args->{$_}} @names;
 	my @array = (1..$mutmap->{static_length});
 	my @bins;
 	my @meaningful_sites;
 	for my $ind (@array){
 		my %distr = find_all_distances_probs($mutmap, $ind, $shuffle);
-		my @site_bins = distr_to_stathist_probs(\%distr); 
+		my @site_bins = distr_to_stathist_probs(\%distr, $normalization); 
 		if (defined $site_bins[0] && defined $site_bins[1]){
 			push @meaningful_sites, $ind;
 			foreach my $interval (keys %{$site_bins[0]}){
@@ -531,6 +544,38 @@ sub collect_distances{
 }
 
 
+
+sub splicebins {
+	my @bins = @{$_[0]};
+	my @group = @{$_[1]};
+	my @groupbins;
+	
+	foreach my $interval (keys %{$bins[0]}){
+		foreach my $ind (@group){
+			$groupbins[0]->{$interval} += $bins[0]->{$interval}->[$ind];
+			$groupbins[1]->{$interval} += $bins[1]->{$interval}->[$ind];
+		}
+	}
+	return @groupbins;
+}
+
+sub print_histogram {
+			my @bins = @{$_[0]};
+			my $outfile = $_[1];
+			my $header = $_[2];
+			open OUT, ">>$outfile" or die "CAnnot open $outfile $!";
+			print OUT $header;
+			print OUT "Distance,Same,Diff\n";
+			my @sortedsame = sort (keys %{$bins[0]});
+			foreach my $dist (@sortedsame){
+				print OUT $dist.",".$bins[0]{$dist}.",".$bins[1]{$dist}."\n"
+			}
+			my $sumsame = sum (values %{$bins[0]});
+			my $sumdiff = sum (values %{$bins[1]});
+			print OUT "Sum same: $sumsame Sum diff: $sumdiff\n";
+			close OUT;
+}
+		
 sub compress_array_of_bins_to_hash {
 		my @bins = @{$_[0]};
 		my @shortbins;
@@ -583,7 +628,7 @@ sub hist_mean {
 	return $t/$summ;
 }
 
-sub hist_group {
+sub hist_group_average {
 	my %pre_hist = %{$_[0]};
 	my @group = @{$_[1]};
 	my $type = $_[2];

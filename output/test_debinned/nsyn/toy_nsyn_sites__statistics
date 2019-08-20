@@ -212,9 +212,8 @@ $VAR1 = [
             '0.200608' => '0.333333333333333'
           }
         ];
-sum same 2 sum diff 2
->same_median	diff_median	median_difference	pvalue
-2	0.07324	0.213181	0.139941	0.07
+>same_	diff_	_difference	pvalue
+2			0	1
 >debug site 3 
 output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]
 $VAR1 = {
@@ -4802,9 +4801,8 @@ $VAR1 = [
             '0.003911' => 0
           }
         ];
-sum same 27 sum diff 27
->same_median	diff_median	median_difference	pvalue
-3	0.03766	0.044474	0.006814	0.36
+>same_	diff_	_difference	pvalue
+3			0	1
 >debug site 4 
 output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]
 $VAR1 = {
@@ -5591,9 +5589,8 @@ $VAR1 = [
             '0.197304' => 0
           }
         ];
-sum same 10 sum diff 10
->same_median	diff_median	median_difference	pvalue
-4	0.07324	0.163732	0.090492	0.12
+>same_	diff_	_difference	pvalue
+4			0	1
 >debug site 5 
 output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]
 $VAR1 = {
@@ -5820,9 +5817,8 @@ $VAR1 = [
             '0.114306' => 0
           }
         ];
-sum same 3 sum diff 3
->same_median	diff_median	median_difference	pvalue
-5	0.114306	0.039576	-0.07473	1
+>same_	diff_	_difference	pvalue
+5			0	1
 >debug site 6 
 output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]
 $VAR1 = {
@@ -5992,9 +5988,8 @@ $VAR1 = [
             '0.015108' => 0
           }
         ];
-sum same 3 sum diff 3
->same_median	diff_median	median_difference	pvalue
-6	0.040263	0.0114765	-0.0287865	0.89
+>same_	diff_	_difference	pvalue
+6			0	1
 >debug site 7 
 output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]
 $VAR1 = {
@@ -8360,6 +8355,5 @@ $VAR1 = [
             '0.152688' => 0
           }
         ];
-sum same 20 sum diff 20
->same_median	diff_median	median_difference	pvalue
-7	0.049395	0.046839	-0.002556	0.38
+>same_	diff_	_difference	pvalue
+7			0	1
