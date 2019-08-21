@@ -32,11 +32,11 @@ GetOptions (
 		'verbose' => \$verbose,
 		'group=s' => \$group,
 );
-
+$| = 1;
 my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(",", $group);
-
+print STDOUT "Probsmutmap created\n";
 ## todo: can be rewritten for efficient computation of both types of stats
 my $time0 = clock();
 if ($stattype){

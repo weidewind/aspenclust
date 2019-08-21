@@ -33,9 +33,12 @@ GetOptions (
 
 );
 
+$| = 1;
+
 my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(',', $sites);
+print STDOUT "Probsmutmap created\n";
 
 unless (@sites) {@sites = (1..$mutmap->{static_length});}
 Aspens::single_sites_stats({mutmap =>$mutmap, simnumber => $simnumber, sites => \@sites, verbose => $verbose, stattype => $stattype, norm =>$norm}); # Works!

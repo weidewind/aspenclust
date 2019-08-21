@@ -460,10 +460,7 @@ sub distr_to_stathist_probs {
 		if (!%distr){return @bins;}
 		# neva july normalization
 		foreach my $subst(keys %distr){
-#print "subst $subst \n";
 			if (defined $distr{$subst}->[0] && defined $distr{$subst}->[1]) {
-				my $same_size = $distr{$subst}->[2]->[0];
-				my $diff_size = $distr{$subst}->[2]->[1];
 				$pruned_distr{$subst} = $distr{$subst};
 				my $ancestor_derived = $subst =~ s/[0-9]//gr; 
 				$hash{$ancestor_derived} = 1;
@@ -472,9 +469,6 @@ sub distr_to_stathist_probs {
 		if (!%pruned_distr){return @bins;}
 		my $mutgroups_count = scalar keys %hash;
 		foreach my $subst(keys %pruned_distr){
-					my $same_size = $pruned_distr{$subst}->[2]->[0];
-					my $diff_size = $pruned_distr{$subst}->[2]->[1];			
-						
 					my %stemp;
 					my %dtemp;
 					my $d_weights_sum;

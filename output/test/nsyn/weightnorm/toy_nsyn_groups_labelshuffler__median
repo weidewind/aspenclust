@@ -1212,6 +1212,6 @@ Sum same: 26 Sum diff: 26
 group	3	0.042913	0.045779	0.002866
 complement	3	0.045538	0.037745	-0.007793
 diffdiff	0.010659
-group pvalue	0.32
-enrichment pvalue	0.15
-depletion pvalue	0.85
+group pvalue	0.28
+enrichment pvalue	0.2
+depletion pvalue	0.8

@@ -31,9 +31,10 @@ GetOptions (
 		'stattype=s' => \$stattype,
 		'verbose' => \$verbose,
 );
-
+$| = 1;
 my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
+print STDOUT "Probsmutmap created\n";
 
 my $time0 = clock();
 Aspens::global_stats({mutmap => $mutmap, simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose});

@@ -34,6 +34,8 @@ GetOptions (
 #		'group=s' => \$group,
 );
 
+$| = 1;
+
 my $args = {protein => $protein, state => $state, bigtag => $bigtag};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(",", $group);
@@ -49,7 +51,14 @@ my $siteshufflerfile = Aspens::group_stats({mutmap => $mutmap, shuffletype => "s
 my $timedone = clock();
 my $exectime = $timedone-$time0;
 print "Group tests done in $exectime\n";
+my $time0 = clock();
+my $sitesfile = Aspens::single_sites_stats({mutmap => $mutmap, simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose});
+my $timedone = clock();
+my $exectime = $timedone-$time0;
+print "Site test done in $exectime\n";
 
+
+print "Being assertive\n";
 open G, "<$globalfile" or die "CAnnot open $globalfile $!";
 my ($glsame, $gldiff);
 while (<G>){
@@ -74,15 +83,30 @@ my ($grsame_siteshuffler, $grdiff_siteshuffler) = (split /\s+/, $strs[0])[2,5];
 my ($csame_siteshuffler, $cdiff_siteshuffler) = (split /\s+/, $strs[1])[2,5];
 close G;
 
+open G, "<$sitesfile" or die "CAnnot open $sitesfile $!";
+@array = <G>;
+@strs = grep {$_ =~ "^Sum"} (@array);
+my $samesum;
+my $diffsum;
+foreach my $str (@strs){
+	my ($ts, $td) = (split /\s+/, $str)[2,5];
+	$samesum += $ts;
+	$diffsum += $td;
+}
+close G;
+
 print join(",", $glsame, $gldiff, $grsame_labelshuffler,  $grdiff_labelshuffler, $csame_labelshuffler, $cdiff_labelshuffler);
 # weighted sum of observations (both for parallel and divergent subs) is the same for whole protein and for sum of group and its complement
 assert(abs($glsame  - ($grsame_labelshuffler +$csame_labelshuffler)) < 0.0001, "For labelshuffler, the total number of observations for parallel substitutions (OPS) equals to the sum of OPS for group and its complement");
 assert(abs($gldiff  - ($grdiff_labelshuffler +$cdiff_labelshuffler)) < 0.0001, "For labelshuffler, the total number of observations for divergent substitutions (ODS) equals to the sum of ODS for group and its complement");
 assert(abs($glsame  - ($grsame_siteshuffler +$csame_siteshuffler)) < 0.0001, "For siteshuffler, the total number of observations for parallel substitutions (OPS) equals to the sum of OPS for group and its complement");
 assert(abs($gldiff  - ($grdiff_siteshuffler +$cdiff_siteshuffler)) < 0.0001, "For siteshuffler, the total number of observations for divergent substitutions (ODS) equals to the sum of ODS for group and its complement");
+assert(abs($glsame-$samesum) < 0.0001, "Sum of OPS is equal for single_sites and global analysis");
+assert(abs($gldiff-$diffsum) < 0.0001, "Sum of ODS is equal for single_sites and global analysis");
 if ($norm == "weightnorm"){
 	assert(abs($glsame - 65) < 0.0001, "Total number of observations for parallel substitutions is close to 65");
 	assert(abs($gldiff - 65) < 0.0001, "Total number of observations for divergent substitutions is close to 65");
 }
+print "\nAssertive tests done\n";
 
 
