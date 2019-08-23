@@ -159,7 +159,7 @@ sub single_sites_stats {
 		my $same_median = hist_average(\%{$bins[0]}, $stattype);
 		my $diff_median = hist_average(\%{$bins[1]}, $stattype);
 		my $obs_difference = $diff_median-$same_median;
-		print OUT ">same_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";
+		print OUT ">site\tsame_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";
 		print OUT $ind."\t";
 		print OUT $same_median."\t"; #this have to be the median of "same" statistics
 		print OUT $diff_median."\t"; #this have to be the median of "diff" statistics
