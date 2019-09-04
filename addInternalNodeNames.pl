@@ -5,9 +5,13 @@ use strict;
 use Bio::Phylo::IO;
 
 
-my $tree_file = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.newick";
-my $hashfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.table";
-my $outfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.withinternals.newick";
+#my $tree_file = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.newick";
+# my $hashfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.table";
+# my $outfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/KseniaTrees/little_ksu/nointernals/h1.likelihoods.megaexported.withinternals.newick";
+
+my $tree_file = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/aspens/phyloArtifactsCheck/n1.ancestor.likelihoods.newick";
+my $hashfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/aspens/phyloArtifactsCheck/n1.ancestor.likelihoods.table.tree";
+my $outfile = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/aspens/phyloArtifactsCheck/n1.ancestor.likelihoods.withinternals.newick";
 open TREE, "<$tree_file" or die "Cannot open file ".$tree_file."\n";
 
 my $tree_string;

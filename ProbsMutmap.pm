@@ -12,27 +12,37 @@ use File::Path qw(make_path remove_tree);
 use lib getcwd(); # adds working directory to @INC
 use Data::Dumper;
 use IPC::System::Simple qw(capture);
-use Parsers qw(parse_likelihoods parse_tree parse_fasta);
+use Parsers qw(parse_likelihoods parse_fasta_as_likelihoods parse_tree parse_fasta);
 #use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance);
 
-
+sub likelihood_tag {
+	my $l = shift;
+	return "likelihoods" if $l;
+	return "mostlikely" if !$l;
+}
 
 sub new {
 	my $class = shift;
 	my $args = shift;	
-	my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigtag}, $args->{state});
+	my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigtag}, $args->{state}, likelihood_tag($args->{likelihood}));
 	make_path($output_base);
 	my $input_base = File::Spec->catdir(getcwd(), "data");
 	
 	my $treefile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods.withinternals.newick");
-	my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods");
 	my $fastafile = File::Spec->catfile($input_base, $args->{protein}.".nointernals.fa");
-	
+	my $internalseqs;
+	my $keystring;
+	if ($args->{likelihood}){
+		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods");
+		($internalseqs, $keystring) = parse_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+	}
+	else {
+		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.fa");
+		($internalseqs, $keystring) = parse_fasta_as_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+	}
 	my $tree = parse_tree($treefile);
 	my ($fasta, $length) = parse_fasta($fastafile);
-	my ($internalseqs, $keystring) = parse_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
 	my @mutmaps = probmutmap($tree, $fasta, $internalseqs, $args->{state}, $keystring);
-	
 	my %distance_hash;
 	my $self;
 	$self = {
@@ -81,8 +91,7 @@ sub probmutmap {
 		else{
 			$seq = $internalseqs{$name};
 		}
-		my %subs = $comparator->substitutions($internalseqs{$node->get_ancestors()->[0]->get_name()},
-											$seq, $state);					  
+		my %subs = $comparator->substitutions($internalseqs{$node->get_ancestors()->[0]->get_name()},$seq, $state);		
 		$subs_on_node{$name}=\%subs; # $subs{$ind} = (Substitution,Substitution,..)
 		for	my $site_index(keys %subs){
 			if (! exists $nodes_with_sub{$site_index}){

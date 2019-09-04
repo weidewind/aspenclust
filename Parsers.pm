@@ -7,7 +7,7 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(parse_fasta parse_likelihoods parse_tree parse_likelihoods_as_fasta) ; # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(parse_fasta parse_likelihoods parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods) ; # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Phylo::IO;
 use Bio::SeqIO;
@@ -76,6 +76,29 @@ sub parse_likelihoods_as_fasta {
 		$nodeseqs{$node} = $string;
 	}
 	return %nodeseqs;
+}
+
+
+# returns 
+# $nodeseqs{$nodename}[$i] = (0,0,0.8,0.2)
+# $keystring = "ACGT"
+sub parse_fasta_as_likelihoods {
+	my $nodeseqs_file = shift;
+	my %nodeseqs;
+	my $keystring = "ACGT";
+	my $seqio = Bio::SeqIO->new(-file => $nodeseqs_file, -format => "fasta");
+	my $length;
+	while ( my $seqobj = $seqio->next_seq ) {
+		my $trimmed_id = (split(/\//, $seqobj->display_id))[0];
+		for my $i (0..$seqobj->length()-1){
+			my $letter = substr($seqobj->seq, $i,1);
+			my $probs = [0,0,0,0];
+			my $ind = index($keystring, $letter);
+			$probs->[$ind] = 1;
+			$nodeseqs{ $trimmed_id } [$i] = $probs;
+		}
+	}
+	return (\%nodeseqs, $keystring);
 }
 
 sub index_of_max {

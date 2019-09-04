@@ -178,7 +178,6 @@ sub substitutions{
 	}
 
 	die "\nError in substitutions(): sequences have different lengths:\n".$alen."\n".$len."\n" if $alen!=$len;
-	
 	for(my $i=0;$i<=$len-3;$i+=3){
 		my $ind = ($i/3)+1;
 		my @acod=@anc_seq[$i,$i+1,$i+2];

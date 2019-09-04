@@ -21,6 +21,7 @@ my $bigtag = "test";
 my $stattype = "";
 my $group = "1,2,3,4";
 my $verbose;
+my $likelihood;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -31,9 +32,10 @@ GetOptions (
 		'stattype=s' => \$stattype,
 		'verbose' => \$verbose,
 		'group=s' => \$group,
+		'likelihood' => \$likelihood,
 );
 $| = 1;
-my $args = {protein => $protein, state => $state, bigtag => $bigtag};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(",", $group);
 print STDOUT "Probsmutmap created\n";

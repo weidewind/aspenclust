@@ -22,6 +22,7 @@ my $bigtag = "test";
 my $stattype = "median";
 my $verbose = 1;
 my $group = "1,2,3,4";
+my $likelihood;
 
 GetOptions (	
 #		'protein=s' => \$protein,
@@ -30,13 +31,14 @@ GetOptions (
 		'norm=s' => \$norm,
 		'bigtag=s' => \$bigtag,
 		'stattype=s' => \$stattype,
+		'likelihood' => \$likelihood,
 #		'verbose' => \$verbose,
 #		'group=s' => \$group,
 );
 
 $| = 1;
 
-my $args = {protein => $protein, state => $state, bigtag => $bigtag};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(",", $group);
 

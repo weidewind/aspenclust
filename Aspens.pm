@@ -657,6 +657,7 @@ sub pairweight {
 		if ($n1->get_parent eq $n2->get_parent){
 			$pairweight = $pairweight/$sub2->{"Substitution::ancestor_probability"};
 		}
+		if ($n1->get_parent eq $n2 || $n2->get_parent eq $n1){$pairweight = 0;}
 		return $pairweight;
 }   
 

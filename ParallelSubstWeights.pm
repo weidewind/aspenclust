@@ -3,6 +3,8 @@ use Bio::Phylo::Forest::Tree;
 use Class::Struct;
 use strict;
 
+
+
 sub is_confident_branch{
 	my ($rh_branch_supports,$brname,$threshold)=@_;
 	return $rh_branch_supports->{$brname}>=$threshold;
@@ -13,16 +15,16 @@ sub is_confident_branch{
 #	bases => '@'
 #};
 
-sub unparse_subst_abbr{
-	my $si=shift;
-	my @bases=@{$si->bases};
-	return $bases[0].$si->site.$bases[1];
-}
+# sub unparse_subst_abbr{
+	# my $si=shift;
+	# my @bases=@{$si->bases};
+	# return $bases[0].$si->site.$bases[1];
+# }
 
 sub calculate_mutations_confidences{
 	my ($tree,$rh_mutation_map,$rh_branch_supports,$confidence_threshold)=@_;
 	#$tree - Bio::Phylo::Forest::Tree object with named branches
-   #$rh_mutation_map - hashref $rh_mutation_map->{$branch_name}->{$site_id} (analogous to sites_on_node)
+   #$rh_mutation_map - hashref $rh_mutation_map->{$branch_name}->{$site_id} (analogous to sites_on_node). Defined, if there is a subst on this node
    #$rh_branch_supports - hashref $rh_branch_supports->{$branch_name} - A branch confidence
    #$confidence_threshold
 	my %closest_conf_branch;

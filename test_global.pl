@@ -21,6 +21,7 @@ my $norm = "weightnorm"; #weightnorm or countnorm
 my $bigtag = "test";
 my $stattype = "median";
 my $verbose;
+my $likelihood;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -30,9 +31,10 @@ GetOptions (
 		'bigtag=s' => \$bigtag,
 		'stattype=s' => \$stattype,
 		'verbose' => \$verbose,
+		'likelihood' => \$likelihood,
 );
 $| = 1;
-my $args = {protein => $protein, state => $state, bigtag => $bigtag};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood};
 my $mutmap = ProbsMutmap->new($args);
 print STDOUT "Probsmutmap created\n";
 

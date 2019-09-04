@@ -20,6 +20,7 @@ my $bigtag = "test";
 my $stattype = "median";
 my $verbose;
 my $sites;
+my $likelihood;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -30,12 +31,13 @@ GetOptions (
 		'sites=s' => \$sites,
 		'verbose' => \$verbose,
 		'stattype=s' => \$stattype,
+		'likelihood' => \$likelihood,
 
 );
 
 $| = 1;
 
-my $args = {protein => $protein, state => $state, bigtag => $bigtag};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(',', $sites);
 print STDOUT "Probsmutmap created\n";
