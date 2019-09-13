@@ -24,9 +24,9 @@ sub likelihood_tag {
 sub new {
 	my $class = shift;
 	my $args = shift;	
-	my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigtag}, $args->{state}, likelihood_tag($args->{likelihood}));
+	my $output_base = File::Spec->catdir(getcwd(), "output", , $args->{input}, $args->{bigtag}, $args->{state}, likelihood_tag($args->{likelihood}));
 	make_path($output_base);
-	my $input_base = File::Spec->catdir(getcwd(), "data");
+	my $input_base = File::Spec->catdir(getcwd(), "data", $args->{input});
 	
 	my $treefile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods.withinternals.newick");
 	my $fastafile = File::Spec->catfile($input_base, $args->{protein}.".nointernals.fa");

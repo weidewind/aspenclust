@@ -195,6 +195,97 @@ sub single_sites_stats {
 # counts each pair only once
 
 
+sub group_stats_batch {
+	my $args = shift;
+	my @names = qw(mutmap shuffletype simnumber groupnames stattype norm outfile verbose);
+	my ($mutmap, $shuffletype, $simnumber, $groupnames,  $stattype, $norm, $outfile, $verbose) = map {$args->{$_}} @names;
+	
+	my $path = $mutmap->pathFinder({norm => $norm});
+	#my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_".$shuffletype."_".$groupname."_".$stattype);	
+	#my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_realstats({mutmap=>$mutmap, group=>$group, stattype=>$stattype, norm => $norm, verbose=> $verbose,outfile=>$outfile});
+	my %outfiles;
+	my %realresults;
+	foreach my $groupname(keys %{$groupnames}){	
+		my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_".$shuffletype."_".$groupname."_".$stattype);	
+		$outfiles{$groupname} = $outfile;
+		my @realresult = group_realstats({mutmap=>$mutmap, group=>$groupnames->{$groupname}, stattype=>$stattype, norm => $norm, verbose=> $verbose,outfile=>$outfile});
+		$realresults{$groupname} = \@realresult;
+	}
+	print Dumper (\%outfiles);
+	if ($shuffletype eq "labelshuffler"){
+		my %simres;
+		
+		for (my $t = 0; $t < $simnumber; $t++){
+			my @temp = collect_distances({mutmap => $mutmap, shuffle=>"shuffle", norm=>$norm});
+			my @shuffler_bins = @{$temp[0]};
+			foreach my $groupname(keys %{$groupnames}){	
+				my $bootstrap_difference_group = hist_group_average(\%{$shuffler_bins[1]}, $realresults{$groupname}[3], $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $realresults{$groupname}[3], $stattype);
+				my $bootstrap_difference_complement = hist_group_average(\%{$shuffler_bins[1]}, $realresults{$groupname}[4], $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $realresults{$groupname}[4], $stattype);	
+				if ($bootstrap_difference_group >= $realresults{$groupname}[1]){$simres{$groupname}{"group_count"}++;}
+				if ($bootstrap_difference_group-$bootstrap_difference_complement >= $realresults{$groupname}[0]){$simres{$groupname}{"enrich_count"}++;}
+				if ($bootstrap_difference_group-$bootstrap_difference_complement <= $realresults{$groupname}[0]){$simres{$groupname}{"depl_count"}++;}
+			}
+		}
+		foreach my $groupname(keys %{$groupnames}){
+			my $o = $outfiles{$groupname};
+			open OUT, ">>$o" or die "cannot create output file $o: $!";
+			print OUT "group pvalue\t".$simres{$groupname}{"group_count"}/$simnumber."\n";
+			print OUT "enrichment pvalue\t".$simres{$groupname}{"enrich_count"}/$simnumber."\n";
+			print OUT "depletion pvalue\t".$simres{$groupname}{"depl_count"}/$simnumber."\n";
+			close OUT;
+		}
+	}
+	elsif ($shuffletype eq "siteshuffler"){
+		foreach my $groupname(keys %{$groupnames}){
+			my @meaningful_sites = (@{$realresults{$groupname}[3]}, @{$realresults{$groupname}[4]});
+			my $counter1;
+			my $counter2;
+			my $counter3;
+			my $counter4;
+			my $counter5;
+			my $counter6;
+
+			for (my $t = 0; $t < $simnumber; $t++){
+				my @bootstrap_group = shuffle @meaningful_sites;
+				my @bootstrap_complement = splice (@bootstrap_group, scalar @{$realresults{$groupname}[3]}, scalar @meaningful_sites - scalar @{$realresults{$groupname}[3]});
+				
+				my $same_median_group = hist_group_average(\%{$realresults{$groupname}[5]->[0]}, \@bootstrap_group, $stattype);
+				my $diff_median_group = hist_group_average(\%{$realresults{$groupname}[5]->[1]}, \@bootstrap_group, $stattype);
+				my $same_median_complement = hist_group_average(\%{$realresults{$groupname}[5]->[0]}, \@bootstrap_complement, $stattype);
+				my $diff_median_complement = hist_group_average(\%{$realresults{$groupname}[5]->[1]}, \@bootstrap_complement, $stattype);
+
+				if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $realresults{$groupname}[0]){
+					$counter5++;
+				}
+				if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement <= $realresults{$groupname}[0]){
+					$counter6++;
+				}
+				if ($diff_median_group-$same_median_group >= $realresults{$groupname}[1]){ 
+					$counter1++;
+					if ($diff_median_complement-$same_median_complement <= $realresults{$groupname}[2]){
+						$counter2++;
+					}
+				}
+				
+				if ($diff_median_group-$same_median_group <= $realresults{$groupname}[1]){ 
+					$counter3++;
+					if ($diff_median_complement-$same_median_complement >= $realresults{$groupname}[2]){
+						$counter4++;
+					}
+				}
+			}
+			my $o = $outfiles{$groupname};
+			open OUT, ">>$o" or die "cannot create output file $o: $!";	
+			print OUT "pvalue e\t".$counter1/$simnumber."\tpvalue enrichment\t".$counter2/$simnumber."\n"; 
+			print OUT "pvalue d\t".$counter3/$simnumber."\tpvalue depletion\t".$counter4/$simnumber."\n";
+			print OUT "pvalue diffdiff enrichment\t".$counter5/$simnumber."\tpvalue diffdiff depletion\t".$counter6/$simnumber."\n";
+			close OUT;
+		}
+	}
+	else {die "Unknown group shuffler type $shuffletype";}
+	return %outfiles;
+}
+
 ## bootstrap: standard shuffler, shuffles labels on sites
 sub group_stats {
 	my $args = shift;
