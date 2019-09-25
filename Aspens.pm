@@ -201,8 +201,6 @@ sub group_stats_batch {
 	my ($mutmap, $shuffletype, $simnumber, $groupnames,  $stattype, $norm, $outfile, $verbose) = map {$args->{$_}} @names;
 	
 	my $path = $mutmap->pathFinder({norm => $norm});
-	#my $outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_groups_".$shuffletype."_".$groupname."_".$stattype);	
-	#my ($diffdiff, $obs_difference_group, $obs_difference_complement, $group, $complement, $bins) = group_realstats({mutmap=>$mutmap, group=>$group, stattype=>$stattype, norm => $norm, verbose=> $verbose,outfile=>$outfile});
 	my %outfiles;
 	my %realresults;
 	foreach my $groupname(keys %{$groupnames}){	
@@ -214,7 +212,7 @@ sub group_stats_batch {
 	print Dumper (\%outfiles);
 	if ($shuffletype eq "labelshuffler"){
 		my %simres;
-		
+		print "Going to shuffle labels \n";
 		for (my $t = 0; $t < $simnumber; $t++){
 			my @temp = collect_distances({mutmap => $mutmap, shuffle=>"shuffle", norm=>$norm});
 			my @shuffler_bins = @{$temp[0]};
@@ -226,12 +224,14 @@ sub group_stats_batch {
 				if ($bootstrap_difference_group-$bootstrap_difference_complement <= $realresults{$groupname}[0]){$simres{$groupname}{"depl_count"}++;}
 			}
 		}
+		print "Finished shuffling\n";
 		foreach my $groupname(keys %{$groupnames}){
 			my $o = $outfiles{$groupname};
 			open OUT, ">>$o" or die "cannot create output file $o: $!";
 			print OUT "group pvalue\t".$simres{$groupname}{"group_count"}/$simnumber."\n";
 			print OUT "enrichment pvalue\t".$simres{$groupname}{"enrich_count"}/$simnumber."\n";
 			print OUT "depletion pvalue\t".$simres{$groupname}{"depl_count"}/$simnumber."\n";
+			print OUT "iterations\t".$simnumber."\n";
 			close OUT;
 		}
 	}
@@ -244,7 +244,7 @@ sub group_stats_batch {
 			my $counter4;
 			my $counter5;
 			my $counter6;
-
+			print "Going to shuffle sites \n";
 			for (my $t = 0; $t < $simnumber; $t++){
 				my @bootstrap_group = shuffle @meaningful_sites;
 				my @bootstrap_complement = splice (@bootstrap_group, scalar @{$realresults{$groupname}[3]}, scalar @meaningful_sites - scalar @{$realresults{$groupname}[3]});
@@ -274,11 +274,13 @@ sub group_stats_batch {
 					}
 				}
 			}
+			print "Finished shuffling\n";
 			my $o = $outfiles{$groupname};
 			open OUT, ">>$o" or die "cannot create output file $o: $!";	
 			print OUT "pvalue e\t".$counter1/$simnumber."\tpvalue enrichment\t".$counter2/$simnumber."\n"; 
 			print OUT "pvalue d\t".$counter3/$simnumber."\tpvalue depletion\t".$counter4/$simnumber."\n";
 			print OUT "pvalue diffdiff enrichment\t".$counter5/$simnumber."\tpvalue diffdiff depletion\t".$counter6/$simnumber."\n";
+			print OUT "iterations\t".$simnumber."\n";
 			close OUT;
 		}
 	}
@@ -315,6 +317,7 @@ sub group_stats {
 		print OUT "group pvalue\t".$group_count/$simnumber."\n";
 		print OUT "enrichment pvalue\t".$enrich_count/$simnumber."\n";
 		print OUT "depletion pvalue\t".$depl_count/$simnumber."\n";
+		print OUT "iterations\t".$simnumber."\n";
 	}
 	elsif ($shuffletype eq "siteshuffler"){
 		my @meaningful_sites = (@{$group}, @{$complement});
@@ -359,6 +362,7 @@ sub group_stats {
 		print OUT "pvalue e\t".$counter1/$simnumber."\tpvalue enrichment\t".$counter2/$simnumber."\n"; 
 		print OUT "pvalue d\t".$counter3/$simnumber."\tpvalue depletion\t".$counter4/$simnumber."\n";
 		print OUT "pvalue diffdiff enrichment\t".$counter5/$simnumber."\tpvalue diffdiff depletion\t".$counter6/$simnumber."\n";
+		print OUT "iterations\t".$simnumber."\n";
 	}
 	else {die "Unknown group shuffler type $shuffletype";}
 	close OUT;
@@ -484,7 +488,7 @@ sub find_all_distances_probs {
 								my $pairweight = pairweight(${$nodes_subset[$j]},${$nodes_subset[$i]}, $sub1, $sub2);
 
 								#print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
-								if ($pairweight > 0){ # ie these nodes are not sequential; does not work since 02 06 2015
+								if ($pairweight > 0){ # ie these nodes are not sequential
 									if (!exists $hash{"$ancestor$derived1$i"} ){
 										my @same = ();
 										my @diff = ();
@@ -498,9 +502,6 @@ sub find_all_distances_probs {
 										push @{ ($hash{"$ancestor$derived1$i"})->[1] }, [$dist,$pairweight];
 										$count_diff = $count_diff+$weight2;
 									}
-								}
-								else {
-									print "Panic! Distance between ".${$shuffled[$i]}->get_name." and ".${$shuffled[$j]}->get_name." is $dist \n";
 								}
 
 							}

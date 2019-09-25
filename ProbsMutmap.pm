@@ -34,7 +34,12 @@ sub new {
 	my $keystring;
 	if ($args->{likelihood}){
 		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods");
-		($internalseqs, $keystring) = parse_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+		if ($args->{fromcsv}){
+			($internalseqs, $keystring) = parse_likelihoods_csv($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+		}
+		else {
+			($internalseqs, $keystring) = parse_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+		}
 	}
 	else {
 		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.fa");

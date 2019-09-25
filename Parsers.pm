@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 package Parsers;
 
 use strict;
@@ -7,7 +6,7 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(parse_fasta parse_likelihoods parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods) ; # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(parse_fasta parse_likelihoods parse_likelihoods_csv parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods) ; # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Phylo::IO;
 use Bio::SeqIO;
@@ -58,6 +57,32 @@ sub parse_likelihoods {
 		$nodename = substr($str[0],1)."_".$str[1];
 		$s = <FILE>;
 
+	}
+	close FILE;
+	return (\%nodeseqs, $keystring);
+}
+
+
+# parse likelihoods from mega cmd-line version 
+sub parse_likelihoods_csv {
+	my $file = shift;
+	my %nodeseqs;
+	open FILE, "<$file" or die "Cannot open $file\n"; 
+	my $s = <FILE>;
+	my @str = split(/N/,$s);
+	shift @str;
+	my @nodenames = map {"N".$_} @str;
+	my $keystring = "ACGT";
+	my $c = 0;
+	my %keyhash = map {$_ => $c++} split(//, $keystring); 
+	print Dumper \%keyhash;
+	while(<FILE>){
+		my @values = split(/\s+/,$_);
+		my $head = shift @values;
+		my ($ind, $letter) = split(",", $head);
+		for (my $i = 0; $i < scalar @nodenames; $i++){
+			$nodeseqs{$nodenames[$i]}[$ind-1][$keyhash{$letter}] = sprintf("%.10f", $values[$i]);
+		}
 	}
 	close FILE;
 	return (\%nodeseqs, $keystring);
