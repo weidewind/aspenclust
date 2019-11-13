@@ -50,6 +50,28 @@ sub print_scheme{
 	close OUT;
 }
 
+#Node_2344:ATT(F)->ATG(M)|0.132,ATC(F)->ATG(M)|0.342,
+
+sub print_probtree_scheme {
+	my $self = shift;
+	my $ind  = shift;
+	my $filepath  = $self->probtreepath($ind);
+	my $myCodonTable   = Bio::Tools::CodonTable->new();
+	print "printing schemes at $filepath\n";
+	open OUT, ">$filepath" or die "Cannot open $filepath $!";
+	#foreach my $sub (@{$subs_on_node{$nname}->{$ind}}){
+	foreach my $n(@{$self->{static_nodes_with_sub}{$ind}}){
+			print OUT ${$n}->get_name().":";
+			foreach my $sub (@{$self->{static_subs_on_node}{${$n}->get_name()}->{$ind}}){
+				my $anc = $sub->{"Substitution::ancestral_allele"};
+				my $der = $sub->{"Substitution::derived_allele"};
+				print OUT $myCodonTable->translate($anc)."(".$anc.")>".$der."|".$sub->{"Substitution::probability"}.",";	
+			}
+			print OUT "\n";
+	}
+	close OUT;
+
+}
 
 #global analysis
 
@@ -217,8 +239,8 @@ sub group_stats_batch {
 			my @temp = collect_distances({mutmap => $mutmap, shuffle=>"shuffle", norm=>$norm});
 			my @shuffler_bins = @{$temp[0]};
 			foreach my $groupname(keys %{$groupnames}){	
-				my $bootstrap_difference_group = hist_group_average(\%{$shuffler_bins[1]}, $realresults{$groupname}[3], $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $realresults{$groupname}[3], $stattype);
-				my $bootstrap_difference_complement = hist_group_average(\%{$shuffler_bins[1]}, $realresults{$groupname}[4], $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $realresults{$groupname}[4], $stattype);	
+				my $bootstrap_difference_group = hist_group_average($shuffler_bins[1], $realresults{$groupname}[3], $stattype)-hist_group_average($shuffler_bins[0], $realresults{$groupname}[3], $stattype);
+				my $bootstrap_difference_complement = hist_group_average($shuffler_bins[1], $realresults{$groupname}[4], $stattype)-hist_group_average($shuffler_bins[0], $realresults{$groupname}[4], $stattype);	
 				if ($bootstrap_difference_group >= $realresults{$groupname}[1]){$simres{$groupname}{"group_count"}++;}
 				if ($bootstrap_difference_group-$bootstrap_difference_complement >= $realresults{$groupname}[0]){$simres{$groupname}{"enrich_count"}++;}
 				if ($bootstrap_difference_group-$bootstrap_difference_complement <= $realresults{$groupname}[0]){$simres{$groupname}{"depl_count"}++;}
@@ -249,10 +271,10 @@ sub group_stats_batch {
 				my @bootstrap_group = shuffle @meaningful_sites;
 				my @bootstrap_complement = splice (@bootstrap_group, scalar @{$realresults{$groupname}[3]}, scalar @meaningful_sites - scalar @{$realresults{$groupname}[3]});
 				
-				my $same_median_group = hist_group_average(\%{$realresults{$groupname}[5]->[0]}, \@bootstrap_group, $stattype);
-				my $diff_median_group = hist_group_average(\%{$realresults{$groupname}[5]->[1]}, \@bootstrap_group, $stattype);
-				my $same_median_complement = hist_group_average(\%{$realresults{$groupname}[5]->[0]}, \@bootstrap_complement, $stattype);
-				my $diff_median_complement = hist_group_average(\%{$realresults{$groupname}[5]->[1]}, \@bootstrap_complement, $stattype);
+				my $same_median_group = hist_group_average($realresults{$groupname}[5]->[0], \@bootstrap_group, $stattype);
+				my $diff_median_group = hist_group_average($realresults{$groupname}[5]->[1], \@bootstrap_group, $stattype);
+				my $same_median_complement = hist_group_average($realresults{$groupname}[5]->[0], \@bootstrap_complement, $stattype);
+				my $diff_median_complement = hist_group_average($realresults{$groupname}[5]->[1], \@bootstrap_complement, $stattype);
 
 				if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $realresults{$groupname}[0]){
 					$counter5++;
@@ -306,8 +328,8 @@ sub group_stats {
 		for (my $t = 0; $t < $simnumber; $t++){
 			my @temp = collect_distances({mutmap => $mutmap, shuffle=>"shuffle", norm=>$norm});
 			my @shuffler_bins = @{$temp[0]};
-			my $bootstrap_difference_group = hist_group_average(\%{$shuffler_bins[1]}, $group, $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $group, $stattype);
-			my $bootstrap_difference_complement = hist_group_average(\%{$shuffler_bins[1]}, $complement, $stattype)-hist_group_average(\%{$shuffler_bins[0]}, $complement, $stattype);	
+			my $bootstrap_difference_group = hist_group_average($shuffler_bins[1], $group, $stattype)-hist_group_average($shuffler_bins[0], $group, $stattype);
+			my $bootstrap_difference_complement = hist_group_average($shuffler_bins[1], $complement, $stattype)-hist_group_average($shuffler_bins[0], $complement, $stattype);	
 			if ($bootstrap_difference_group >= $obs_difference_group){$group_count++;}
 			if ($bootstrap_difference_group-$bootstrap_difference_complement >= $diffdiff){$enrich_count++;}
 			if ($bootstrap_difference_group-$bootstrap_difference_complement <= $diffdiff){$depl_count++;}
@@ -332,10 +354,10 @@ sub group_stats {
 			my @bootstrap_group = shuffle @meaningful_sites;
 			my @bootstrap_complement = splice (@bootstrap_group, scalar @{$group}, scalar @meaningful_sites - scalar @{$group});
 			
-			my $same_median_group = hist_group_average(\%{$bins->[0]}, \@bootstrap_group, $stattype);
-			my $diff_median_group = hist_group_average(\%{$bins->[1]}, \@bootstrap_group, $stattype);
-			my $same_median_complement = hist_group_average(\%{$bins->[0]}, \@bootstrap_complement, $stattype);
-			my $diff_median_complement = hist_group_average(\%{$bins->[1]}, \@bootstrap_complement, $stattype);
+			my $same_median_group = hist_group_average($bins->[0], \@bootstrap_group, $stattype);
+			my $diff_median_group = hist_group_average($bins->[1], \@bootstrap_group, $stattype);
+			my $same_median_complement = hist_group_average($bins->[0], \@bootstrap_complement, $stattype);
+			my $diff_median_complement = hist_group_average($bins->[1], \@bootstrap_complement, $stattype);
 
 			if ($diff_median_group-$same_median_group - $diff_median_complement+$same_median_complement >= $diffdiff){
 				$counter5++;
@@ -430,6 +452,7 @@ sub group_realstats {
 #$hash{"$ancestor$derived1$i"}->[0]  =  (($samedist,$pairweight),($samedist,$pairweight).. )
 #$hash{"$ancestor$derived1$i"}->[1]  =  (($diffdist,$pairweight),($diffdist,$pairweight).. )
 #$hash{"$ancestor$derived1$i"}->[2] = ($samecount, $diffcount)
+#$hash{"$ancestor$derived1$i"}->[3] = $sub1 probability
 sub find_all_distances_probs {
 	my $mutmap = shift;
 	my $site_index = shift;
@@ -477,7 +500,7 @@ sub find_all_distances_probs {
 					my $count_diff;
 					my $count_same_pairs;
 					my $count_diff_pairs;
-					#print "node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
+					#print "site $site_index node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1\n" unless $shuffle;
 					for (my $j = 0; $j < scalar @nodes_subset; $j++){
 						if ($j == $i){ next; }
 							foreach my $sub2 (@{$subs_on_node{${$nodes_subset[$j]}->get_name()}{$site_index}}){
@@ -487,7 +510,7 @@ sub find_all_distances_probs {
 								my $dist = node_distance($mutmap, ${$shuffled[$i]}, ${$shuffled[$j]}); #!
 								my $pairweight = pairweight(${$nodes_subset[$j]},${$nodes_subset[$i]}, $sub1, $sub2);
 
-								#print "node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
+								print "site $site_index node 1: ".${$nodes_subset[$i]}->get_name()." $ancestor $derived1 weight $weight1 node 2: ".${$nodes_subset[$j]}->get_name()." $ancestor $derived2 dist $dist weight2 $weight2 pairweight $pairweight \n" unless $shuffle;
 								if ($pairweight > 0){ # ie these nodes are not sequential
 									if (!exists $hash{"$ancestor$derived1$i"} ){
 										my @same = ();
@@ -495,11 +518,11 @@ sub find_all_distances_probs {
 										$hash{"$ancestor$derived1$i"} = (\@same, \@diff);
 									}
 									if ($derived1 eq $derived2){
-										push @{ ($hash{"$ancestor$derived1$i"})->[0] }, [$dist,$pairweight];
+										push @{ ($hash{"$ancestor$derived1$i"})->[0] }, [$dist,$pairweight,$weight2]; # 11/11/2019 added $weight2
 										$count_same = $count_same+$weight2;
 									}
 									else {
-										push @{ ($hash{"$ancestor$derived1$i"})->[1] }, [$dist,$pairweight];
+										push @{ ($hash{"$ancestor$derived1$i"})->[1] }, [$dist,$pairweight,$weight2]; # 11/11/2019 added $weight2
 										$count_diff = $count_diff+$weight2;
 									}
 								}
@@ -507,10 +530,10 @@ sub find_all_distances_probs {
 							}
 
 					}
-							#print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
-							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_same;
-							push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_diff;
-
+					#print " $ancestor$derived1$i count same: $count_same, count diff: $count_diff \n" unless $shuffle;
+					push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_same;
+					push @{ ($hash{"$ancestor$derived1$i"})->[2] }, $count_diff;
+					($hash{"$ancestor$derived1$i"})->[3] = $weight1; # 10/10/2019
 			}
 
 		}
@@ -567,7 +590,7 @@ sub distr_to_stathist_probs {
 					my $s_weights_sum;
 					foreach my $s_dist_and_weight (@{$pruned_distr{$subst}->[0]}){
 						my $d = $s_dist_and_weight->[0];
-						$stemp{$d} = $stemp{$d}+$s_dist_and_weight->[1];
+						$stemp{$d} = $stemp{$d}+$s_dist_and_weight->[2]*$s_dist_and_weight->[1]; # 11/11/2019 added $s_dist_and_weight->[2] 
 						switch ($normalization){
 							case "weightnorm" {$s_weights_sum +=$s_dist_and_weight->[1]}
 							case "countnorm" {$s_weights_sum +=1}
@@ -576,22 +599,29 @@ sub distr_to_stathist_probs {
 					}
 					foreach my $d_dist_and_weight (@{$pruned_distr{$subst}->[1]}){
 						my $d = $d_dist_and_weight->[0];
-						$dtemp{$d} = $dtemp{$d}+$d_dist_and_weight->[1];								
+						$dtemp{$d} = $dtemp{$d}+$d_dist_and_weight->[2]*$d_dist_and_weight->[1];		# 11/11/2019 added $d_dist_and_weight->[2] 						
 						switch ($normalization){
 							case "weightnorm" {$d_weights_sum +=$d_dist_and_weight->[1]}
 							case "countnorm" {$d_weights_sum +=1}
 							else {die "Normalization option $normalization unknown"}
 						}	
 					}
+					print $subst."\n";
+					print "Same temp (no normalization)\n";
+					print Dumper (\%stemp);
+					print "Diff temp (no normalization)\n";
+					print Dumper (\%dtemp);
 					#print "Printing unique distances\n";
 					my @alldists = uniq(keys %stemp, keys %dtemp); 
 					#print Dumper (\@alldists);
 					foreach my $interval(@alldists){
-						$bins[0]->{$interval} += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
-						$bins[1]->{$interval} += $dtemp{$interval}/$d_weights_sum;
+						$bins[0]->{$interval} += $pruned_distr{$subst}->[3]*$stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
+						$bins[1]->{$interval} += $pruned_distr{$subst}->[3]*$dtemp{$interval}/$d_weights_sum; # 10/10/2019 added $pruned_distr{$subst}->[3]* to both 
 					}
-
+					
+					print Dumper (\@bins);
 		}
+		print "Finished printing\n";
 
 		return @bins;
 }
@@ -613,7 +643,7 @@ sub collect_distances{
 					$bins[0]->{$interval} += $site_bins[0]->{$interval};
 				}
 				else{
-					$bins[0]->{$interval}->[$ind] = $site_bins[0]->{$interval};
+					$bins[0]->[$ind]->{$interval} = $site_bins[0]->{$interval};
 				}
 			}
 			foreach my $interval (keys %{$site_bins[1]}){
@@ -621,7 +651,7 @@ sub collect_distances{
 					$bins[1]->{$interval} += $site_bins[1]->{$interval};
 				}
 				else{
-					$bins[1]->{$interval}->[$ind] = $site_bins[1]->{$interval};
+					$bins[1]->[$ind]->{$interval} = $site_bins[1]->{$interval};
 				}
 			}
 		}
@@ -636,10 +666,10 @@ sub splicebins {
 	my @group = @{$_[1]};
 	my @groupbins;
 	
-	foreach my $interval (keys %{$bins[0]}){
-		foreach my $ind (@group){
-			$groupbins[0]->{$interval} += $bins[0]->{$interval}->[$ind];
-			$groupbins[1]->{$interval} += $bins[1]->{$interval}->[$ind];
+	foreach my $ind (@group){
+		foreach my $interval (keys %{$bins[0]->[$ind]}){
+			$groupbins[0]->{$interval} += $bins[0]->[$ind]->{$interval};
+			$groupbins[1]->{$interval} += $bins[1]->[$ind]->{$interval};
 		}
 	}
 	return @groupbins;
@@ -715,13 +745,13 @@ sub hist_mean {
 }
 
 sub hist_group_average {
-	my %pre_hist = %{$_[0]};
+	my @pre_hist = @{$_[0]};
 	my @group = @{$_[1]};
 	my $type = $_[2];
 	my %hist;
 	foreach my $ind(@group){
-		foreach my $interval(keys %pre_hist){
-			$hist{$interval} += $pre_hist{$interval}->[$ind];
+		foreach my $interval(keys %{$pre_hist[$ind]}){
+			$hist{$interval} += $pre_hist[$ind]->{$interval};
 		}
 	}
 	return (hist_average(\%hist, $type));
@@ -748,8 +778,12 @@ sub pairweight {
 		my $pairweight = $w1*$w2;
 		if ($n1->get_parent eq $n2->get_parent){
 			$pairweight = $pairweight/$sub2->{"Substitution::ancestor_probability"};
+			print "Sisters!\n";
 		}
-		if ($n1->get_parent eq $n2 || $n2->get_parent eq $n1){$pairweight = 0;}
+		if ($n1->get_parent eq $n2 || $n2->get_parent eq $n1 || $n1 eq $n2){
+			$pairweight = 0;
+			print "Immediately sequential!\n";
+		}
 		return $pairweight;
 }   
 

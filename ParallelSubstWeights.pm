@@ -31,6 +31,7 @@ sub calculate_mutations_confidences{
 	my %mutation_counts;
 	my %mutation_weights;
 	
+	# create %closest_conf_branch{node_name} = node
 	$tree->visit_breadth_first(
 		-in => sub{
 			my $node=shift;
@@ -49,7 +50,7 @@ sub calculate_mutations_confidences{
 			}
 		}
 	);
-
+	# create %mutation_counts{node_name}{site_index}->[0-all mutations in the subtree (?); 1-mutations in the subtree (?) separated by trusted branches]
 	$tree->visit_depth_first(
 		-in => sub{
 			my $node=shift;
@@ -95,6 +96,9 @@ sub calculate_mutations_confidences{
 		}
 	);
 	
+	# create $mutation_weights{$name}->{$site}: 
+	# all muts in closest conf ancestral branch subtree - muts separated from the current branch by trusted branches = muts in the vague subtree to which the current branch belongs
+	# looks perfectly fit for our purposes
 	$tree->visit_depth_first(
 		-in => sub{
 			my $node=shift;

@@ -21,6 +21,7 @@ my $bigtag = "test";
 my $stattype = "";
 my $verbose;
 my $likelihood;
+my $fromcsv;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -31,6 +32,7 @@ GetOptions (
 		'stattype=s' => \$stattype,
 		'verbose' => \$verbose,
 		'likelihood' => \$likelihood,
+		'fromcsv' => \$fromcsv,
 );
 $| = 1;
 my ($groups, $names) = Groups::only_groups($protein);
@@ -39,7 +41,7 @@ for (my $i = 0; $i < scalar @{$groups}; $i++){
 	$groupnames{$names->[$i]} = $groups->[$i];
 }
 print Dumper(\%groupnames);
-my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood, fromcsv => $fromcsv};
 my $mutmap = ProbsMutmap->new($args);
 print STDOUT "Probsmutmap created\n";
 ## todo: can be rewritten for efficient computation of both types of stats

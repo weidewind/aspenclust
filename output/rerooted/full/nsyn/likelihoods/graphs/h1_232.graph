@@ -1,0 +1,16 @@
+Ancestor:R(AGA)
+Derived:K|0.012,K|0.896116,K|0.084537,K|0.012
+Ancestor:A(GCG)
+Derived:E|0.06355264
+Ancestor:E(GAA)
+Derived:K|0.00999,K|0.001,K|0.99,A|0.002808,A|2.808e-06,K|0.001,K|0.01
+Ancestor:K(AAA)
+Derived:E|0.00099,R|0.093,A|1,R|0.091,R|0.001116,R|0.082537,R|0.909
+Ancestor:E(GAG)
+Derived:A|0.000192,A|1.92e-07
+Ancestor:A(GCA)
+Derived:E|0.92945736,E|0.001,E|0.001
+Ancestor:V(GTA)
+Derived:A|0.000936,A|9.36e-07,E|0.000934128
+Ancestor:V(GTG)
+Derived:A|6.4e-05,A|6.4e-08,E|6.3872e-05

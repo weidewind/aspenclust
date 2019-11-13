@@ -115,15 +115,17 @@ sub sub_probabilities{
 	foreach my $anccod (keys %anc_probs){
 		foreach my $dercod (keys %der_probs){
 			if ($anccod ne $dercod){
+				my $ancaa = $myCodonTable->translate($anccod);
+				my $deraa = $myCodonTable->translate($dercod);
 				if ($state eq "nsyn"){
-					my $ancaa = $myCodonTable->translate($anccod);
-					my $deraa = $myCodonTable->translate($dercod);
 					if ($ancaa ne $deraa){
 						$sub_probs{$anccod}{$deraa} = $sub_probs{$anccod}{$deraa}+$anc_probs{$anccod}*$der_probs{$dercod};
 					}
 				}
 				else{
-					$sub_probs{$anccod}{$dercod} = $anc_probs{$anccod}*$der_probs{$dercod};
+					if ($ancaa eq $deraa){
+						$sub_probs{$anccod}{$dercod} = $anc_probs{$anccod}*$der_probs{$dercod};
+					}
 				}
 			}
 		}

@@ -1,0 +1,8 @@
+Ancestor:V(GTC)
+Derived:I|0.001,I|0.001
+Ancestor:F(TTC)
+Derived:L|0.002,I|0.001996,L|4e-06,V|2e-06
+Ancestor:L(CTC)
+Derived:I|0.992012,V|0.000994,I|0.002,I|0.002
+Ancestor:I(ATC)
+Derived:V|0.003,V|1,V|1,V|0.003,L|0.004,L|8e-06,V|4e-06,V|1,V|0.997

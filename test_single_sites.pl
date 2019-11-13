@@ -22,6 +22,7 @@ my $verbose;
 my $sites;
 my $likelihood;
 my $input;
+my $fromcsv;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -34,12 +35,13 @@ GetOptions (
 		'stattype=s' => \$stattype,
 		'likelihood' => \$likelihood,
 		'input=s' => \$input,
+		'fromcsv' => \$fromcsv,
 
 );
 
 $| = 1;
 
-my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood, input => $input};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, likelihood => $likelihood, input => $input, fromcsv => $fromcsv};
 my $mutmap = ProbsMutmap->new($args);
 my @sites = split(',', $sites);
 print STDOUT "Probsmutmap created\n";

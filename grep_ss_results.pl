@@ -2,20 +2,24 @@
 use strict;
 use File::Spec;
 
-my @prots = ("h3","h1","n1","n2"); 
-my $dirname = "output/parenttest/nsyn/likelihoods/weightnorm";
+my @prots = ("h3", "h1", "n1", "n2","n1pand","h1pand"); 
+my $state = "syn";
+my $dirname = "output/rerooted/full/".$state."/likelihoods/weightnorm";
+my $stattype = "mean";
 foreach my $i (@prots){
-	my $outfile = File::Spec->catfile($dirname, $i."_sites_results_mean");
+	my $outfile = File::Spec->catfile($dirname, $i."_sites_results_".$stattype);
 	open OUT, ">$outfile" or die "CAnnot open $outfile $!";
-	my $path  = File::Spec->catfile($dirname, $i."_nsyn_sites_mean_statistics");
-	open F, "<$path" or die "Cannot open $path $!";
+	my $path  = File::Spec->catfile($dirname, $i."_".$state."_sites_".$stattype."_statistics");
+	open F, "<$path" or warn "Cannot open $path $!";
 	while (<F>){
 		if ($_ =~ /^key/){
 			my %hash;
 			$_ = <F>;
-			while (!($_ =~ /^>/) ){
+			while (!($_ =~ /^>/ || $_ =~ /^Hist/) ){
 				my @splitter = split('\s+');
-				$hash{substr($splitter[0],0,4)} = $splitter[1];
+				my $letters =$splitter[0];
+				$letters =~ m/([a-zA-Z]+).*/; 
+				$hash{$1} = $splitter[1];
 				$_ = <F>;
 			}		
 			my @sorted_keys = sort (keys %hash);
@@ -26,6 +30,9 @@ foreach my $i (@prots){
 				elsif (substr($sorted_keys[$j],0,3) ne substr($sorted_keys[$j+1],0,3)){$sep = ";"}
 				else {$sep = ",";}
 				$string = $string.$sorted_keys[$j].$hash{$sorted_keys[$j]}.$sep;
+			}
+			while(!($_ =~ /^>/)){
+				$_ = <F>
 			}
 			$_ = <F>;
 			chomp($_);

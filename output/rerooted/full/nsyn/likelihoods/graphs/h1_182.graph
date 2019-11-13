@@ -1,0 +1,6 @@
+Ancestor:E(GAA)
+Derived:K|1
+Ancestor:A(GCA)
+Derived:S|1,E|1,T|0.035,V|0.004,T|0.035,E|1,T|0.965,T|1
+Ancestor:V(GTA)
+Derived:A|0.996,A|0.004

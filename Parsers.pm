@@ -81,7 +81,7 @@ sub parse_likelihoods_csv {
 		my $head = shift @values;
 		my ($ind, $letter) = split(",", $head);
 		for (my $i = 0; $i < scalar @nodenames; $i++){
-			$nodeseqs{$nodenames[$i]}[$ind-1][$keyhash{$letter}] = sprintf("%.10f", $values[$i]);
+			$nodeseqs{$nodenames[$i]}[$ind-1][$keyhash{$letter}] = sprintf("%.3f", $values[$i]);
 		}
 	}
 	close FILE;

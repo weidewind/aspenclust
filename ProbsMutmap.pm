@@ -12,7 +12,7 @@ use File::Path qw(make_path remove_tree);
 use lib getcwd(); # adds working directory to @INC
 use Data::Dumper;
 use IPC::System::Simple qw(capture);
-use Parsers qw(parse_likelihoods parse_fasta_as_likelihoods parse_tree parse_fasta);
+use Parsers qw(parse_likelihoods parse_likelihoods_csv parse_fasta_as_likelihoods parse_tree parse_fasta);
 #use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance);
 
 sub likelihood_tag {
@@ -28,14 +28,15 @@ sub new {
 	make_path($output_base);
 	my $input_base = File::Spec->catdir(getcwd(), "data", $args->{input});
 	
-	my $treefile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods.withinternals.newick");
+	my $treefile;
 	my $fastafile = File::Spec->catfile($input_base, $args->{protein}.".nointernals.fa");
 	my $internalseqs;
 	my $keystring;
 	if ($args->{likelihood}){
 		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods");
+		$treefile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.likelihoods.withinternals.newick");
 		if ($args->{fromcsv}){
-			($internalseqs, $keystring) = parse_likelihoods_csv($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
+			($internalseqs, $keystring) = parse_likelihoods_csv($probsfile.".csv"); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
 		}
 		else {
 			($internalseqs, $keystring) = parse_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
@@ -43,6 +44,7 @@ sub new {
 	}
 	else {
 		my $probsfile = File::Spec->catfile($input_base, $args->{protein}.".ancestor.fa");
+		$treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		($internalseqs, $keystring) = parse_fasta_as_likelihoods($probsfile); # $nodeseqs{$nodename}[$ind] = (0,0,0.8,0.2)
 	}
 	my $tree = parse_tree($treefile);
@@ -72,6 +74,15 @@ sub graphpath{
 	my $ind = shift;
 	my $filename = $self->{static_protein}."_".$ind.".graph";
 	my $path = File::Spec->catdir($self->{static_output_base}, "graphs");
+	make_path($path);
+	my $path = File::Spec->catfile($path, $filename);
+}
+
+sub probtreepath{
+	my $self = shift;
+	my $ind = shift;
+	my $filename = $self->{static_protein}."_".$ind.".probtree";
+	my $path = File::Spec->catdir($self->{static_output_base}, "trees");
 	make_path($path);
 	my $path = File::Spec->catfile($path, $filename);
 }

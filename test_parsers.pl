@@ -6,12 +6,13 @@ use List::Util qw(sum shuffle);
 
 my ($nodeseqs, $string) = parse_likelihoods_csv("../ksuAncestorPipeline/n1pandemic/ancestors.csv");
 foreach my $key (keys %{$nodeseqs}){
-	print Dumper ($nodeseqs->{$key}->[2]);
 	print "\n";
 	print sum(@{$nodeseqs->{$key}->[2]})."\n"; # must be 1
-	foreach my $site(@{$nodeseqs->{$key}}){
-		if ($nodeseqs->{$key}->[$site]->[2] > 0.000000001 & $nodeseqs->{$key}->[$site]->[2] < 1){
-			print ($nodeseqs->{$key}->[$site]->[2])
+	my $length = scalar @{$nodeseqs->{$key}}-1;
+	foreach my $site(0..$length){
+		my $probs = $nodeseqs->{$key}->[$site];
+		if ($probs->[2] > 0.001 & $probs->[2] < 1){
+			print Dumper ($probs);
 		}
 	}
 }
