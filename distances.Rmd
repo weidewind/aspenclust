@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+```{r}
+library(plyr)
+
+```
+
+```{r}
+setwd("C:/Users/Дмитрий/Documents/CMD/Mito/output")
+distd<-read.csv2(paste(getwd(),"cox2_dist.fdr_results", sep = "/"), dec = ".", comment.char = "#", colClasses = rep("numeric", 9), sep = " ", stringsAsFactors = F)
+
+negpairs<-read.csv2("C:/Users/Дмитрий/Documents/CMD/Mito/08_SupplData/data/results/site_pairs/cox2.supertree.all.neg.l0500.tab", dec = ".",colClasses = rep("numeric", 6), sep = "\t")
+
+pospairs<-read.csv2("C:/Users/Дмитрий/Documents/CMD/Mito/08_SupplData/data/results/site_pairs/cox2.supertree.pos_cor2pcor.l90.n0.pos.u0293.tab", dec = ".",colClasses = rep("numeric", 7), sep = "\t")
+
+#if (nrow(negpairs[negpairs$bgr_site>negpairs$fgr_site,]) > 0){print ("site1 is not always less than site2")}
+#if (nrow(pospairs[pospairs$bgr_site>pospairs$fgr_site,]) > 0){print ("site1 is not always less than site2")}
+
+epiclass<-sapply(1:nrow(distd), function(rownum){
+  site1 = distd[rownum, "site1"]
+  site2 = distd[rownum, "site2"]
+  pos<-pospairs[pospairs$bgr_site == site1 & pospairs$fgr_site == site2,]
+  if (nrow(pos) > 0){return ("Pos")}
+  neg<-negpairs[negpairs$bgr_site == site1 & negpairs$fgr_site == site2,]
+  if (nrow(neg) > 0){return ("Neg")}
+  return("None")
+})
+distd = data.frame(distd, epiclass = epiclass)
+```
+
+```{r}
+hist(distd$lpval) #distdance is greater than expected
+hist(distd$upval) #distdance is less than expected
+
+hist(distd[distd$epiclass == "Pos", "lpval"]) #distdance is greater than expected
+hist(distd[distd$epiclass == "Neg", "lpval"]) #distdance is  greater than expected
+hist(distd[distd$epiclass == "None", "lpval"]) #distdance is  greater than expected
+
+plot(distd$nonseqpairs,distd$fdrstddev) # check if stddev depends on the number of subs - OK
+plot(distd$nonseqpairs,distd$fdrmean) # check if fake mean distd depends on the number of subs - OK
+plot(distd$nonseqpairs,distd$zscore) # In general, unexpectedly big distdances for pairs with few subs. Slightly shorter than expected distdances for pairs with many subs 
+
+
+```
+```{r}
+etypes<-c("Pos", "Neg", "None")
+ds<-ldply(etypes, function(e){data.frame(distant = nrow(distd[distd$lpval < 0.01 & distd$epiclass == e,]), other = nrow(distd[distd$lpval >= 0.01 & distd$epiclass == e,]))})
+rownames(ds) = etypes
+print(as.matrix(ds))
+
+other<-ds["Pos",]+ds["None",]
+conttab<-rbind(Neg = ds["Neg",], other = other)
+print(as.matrix(conttab))
+chisq.test(data.matrix(conttab))
+
+hist(distd[distd$epiclass == "Pos", "zscore"])
+
+ggplot(distd, aes(x=zscore, fill=epiclass)) + geom_histogram(alpha=0.5, position="identity")
+```
+
