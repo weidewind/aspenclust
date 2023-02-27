@@ -12,11 +12,13 @@ parser = argparse.ArgumentParser(description='Collect the results of global anal
 parser.add_argument("--input", dest='analysis_folder', type=str, help="full path to the folder containing analysis results")
 parser.add_argument("--fdr", dest='fdr_folder', type=str, help="full path to the folder containing fdr results")
 parser.add_argument("--state", dest='state', type=str, default="nsyn")
+parser.add_argument("--type", dest='type', default='alleles', type=str, help="alleles or ancestors")
+
 args = parser.parse_args()
 
-proteins = ["h1", "n1", "n2", "h3", "h1pandemic", "n1pandemic"]
+proteins = ["h1", "n1", "n2", "h3", "h1pdm", "n1pdm"]
 
-output = os.path.join(args.analysis_folder,'Alleles_with_FDR'+'.xlsx')
+output = os.path.join(args.analysis_folder,args.type.capitalize() + '_with_FDR'+'.xlsx')
 writer = pd.ExcelWriter(output, engine='xlsxwriter',datetime_format='YYYY-MM-DD HH:MM:SS',options={'strings_to_numbers': True}) 
 # Add a format. Green fill with dark green text.
 workbook = writer.book
@@ -26,11 +28,12 @@ wrapit = workbook.add_format({'text_wrap':True,'align': 'left', 'border':1,'bold
 
 
 for prot in proteins:
-	fdrfile = os.path.join(args.fdr_folder, prot+'_'+args.state+'_mean_alleles_FDR')
-	sitefile = os.path.join(args.analysis_folder,'Alleles.xlsx')
+	fdrfile = os.path.join(args.fdr_folder, prot+'_'+args.state+'_mean_'+ args.type +'_FDR')
+	sitefile = os.path.join(args.analysis_folder, args.type.capitalize()+'.xlsx')
 	if not os.path.isfile(fdrfile) or  not os.path.isfile(sitefile):
 		continue
-	fdrdf = pd.read_csv(fdrfile,  sep='	', names= ["site", "ancder", "par", "div", "diff", "pvalue"])
+	subtype = "ancder" if args.type == "alleles" else "anc"
+	fdrdf = pd.read_csv(fdrfile,  delimiter=r"\s+", names= ["site", subtype, "par", "div", "diff", "pvalue"])
 	sitesdf = pd.read_excel(sitefile, sheet_name=prot)
 	if (fdrdf.shape[0] == 0 or sitesdf.shape[0] == 0):
 		continue

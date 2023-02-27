@@ -118,6 +118,12 @@ my @h1pandemic_thicksurface = (345,351,355,359,360,362,363,371,373,374,376,378,3
 my @h1pandemic_surface = (28,30,39,40,52,53,54,55,62,63,65,70,71,85,87,88,90,91,100,101,103,111,114,129,137,138,141,142,146,147,149,151,154,156,157,158,159,171,172,173,174,177,179,183,185,187,202,203,206,207,212,213,222,225,228,233,236,238,239,253,254,256,275,277,278,284,286,288,289,290,291,293,300,304,306,325,327,328,339,340,345,351,355,359,360,362,363,371,373,374,376,378,382,383,386,387,390,393,397,401,404,416,426,465,468,472,475,477,479,483,487,491,494,498,499,500,502,504,505,508,511,512,515,516,517,518,519);
 my @h1pandemic_internal = (346,347,349,350,354,361,365,366,367,368,370,381,384,385,388,392,395,398,399,403,405,409,420,424,425,427,428,431,433,434,435,436,437,438,440,442,444,445,447,448,449,451,453,454,455,456,457,459,462,463,466,470,473,474,480,481,482,484,486,488,492,493,496,501,510,20,22,23,24,25,26,33,35,36,41,43,44,49,50,58,59,61,67,69,72,74,75,76,77,78,79,80,81,82,84,86,93,94,95,96,97,98,105,107,108,109,117,118,119,120,121,122,123,124,125,128,131,133,134,139,140,143,150,152,153,161,162,164,165,166,167,168,169,175,178,184,190,191,192,193,194,195,196,197,198,199,205,209,214,216,217,218,219,220,227,232,234,235,242,243,244,246,249,251,255,257,258,259,261,263,264,265,266,267,268,271,272,273,274,280,281,283,285,294,296,297,298,301,302,303,308,309,310,312,316,317,318,320,321,324,326,329,331,332,334,335,337);
 
+# Epitope Mapping of the Hemagglutinin Molecule of A/(H1N1)pdm09 Influenza Virus by Using Monoclonal Antibody Escape Mutants (also see h1n1pdm_epitopes.xlsx)
+my @h1pandemic_epitopes = (141,142,143,147,151,154,156,157,158,159,170,171,172,173,174,177,180,200,202,206,210,211,212,238);
+# Structural characterization of a protective epitope spanning A(H1N1)pdm09 influenza virus neuraminidase monomers (crucial) and Molecular Basis for Broad Neuraminidase Immunity: Conserved Epitopes in Seasonal and Pandemic H1N1 as Well as H5N1 Influenza Viruses
+# (crucial in B and F) (also see h1n1pdm_epitopes.xlsx)
+my @n1pandemic_epitopes = (95,449,451,273,309,338,339);
+
 my @n1pandemic_thicksurface = (82,83,84,88,90,93,95,99,100,107,108,110,111,127,146,147,149,150,151,165,173,199,200,209,220,221,222,235,247,248,260,262,264,265,266,268,270,272,273,285,287,309,311,313,329,331,332,335,339,340,341,343,344,354,355,366,377,381,385,386,387,388,390,392,396,397,414,415,416,431,432,434,449,450,451,453,455,462,464,466,86,89,94,98,101,102,104,112,113,126,128,141,143,152,153,154,155,162,163,164,166,170,171,185,188,189,190,198,208,210,213,214,216,217,219,223,225,236,246,249,250,254,257,259,263,267,274,278,284,286,295,296,297,303,305,307,308,312,314,326,330,333,334,336,337,338,352,353,363,364,365,367,368,369,375,378,382,383,384,389,395,398,399,410,411,412,413,417,419,427,430,433,436,448,452,454,456,457,458,460,463,467,468);
 my @n1pandemic_internal = (85,87,91,92,96,97,103,105,106,109,114,115,116,117,118,119,120,121,122,123,124,125,129,130,131,132,133,134,135,136,137,138,139,140,142,144,145,148,156,157,158,159,160,161,167,168,169,172,174,175,176,177,178,179,180,181,182,183,184,186,187,191,192,193,194,195,196,197,201,202,203,204,205,206,207,211,212,215,218,224,226,227,228,229,230,231,232,233,234,237,238,239,240,241,242,243,244,245,251,252,253,255,256,258,261,269,271,275,276,277,279,280,281,282,283,288,289,290,291,292,293,294,298,299,300,301,302,304,306,310,315,316,317,318,319,320,321,322,323,324,325,327,328,342,345,346,347,348,349,350,351,356,357,358,359,360,361,362,370,371,372,373,374,376,379,380,391,393,394,400,401,402,403,404,405,406,407,408,409,418,420,421,422,423,424,425,426,428,429,435,437,438,439,440,441,442,443,444,445,446,447,459,461,465);
 my @n1pandemic_surface = (82,83,84,88,90,93,95,99,100,107,108,110,111,127,146,147,149,150,151,165,173,199,200,209,220,221,222,235,247,248,260,262,264,265,266,268,270,272,273,285,287,309,311,313,329,331,332,335,339,340,341,343,344,354,355,366,377,381,385,386,387,388,390,392,396,397,414,415,416,431,432,434,449,450,451,453,455,462,464,466);
@@ -150,6 +156,9 @@ my @h1_syn_epi_005 = (484,108,149,478,176,242,453,453,98,248,10,59,170,354,123,5
 my @h1_syn_env_005 = (304,495,51,250,451,49,507,498,70,356,290,352,482,156,58,249,506,134,550,501,170,478,228);
 my @h1_syn_epi = (354,123,561,60,280,525,379,254,543,89,2,539,514,476,40,241,55,61,495);
 my @h1_syn_env = (304,495,51,250,451,49,507);
+
+## https://elifesciences.org/articles/49324 supp 1, columns: human sera 2009-2010 OR human sera post-2015 vaccine
+my @h3_antigenic_bloom = qw(160 161 173 175 176 177 205 208 209 223 236 238 240 241 243 260);
 
 
 sub best_sites {
@@ -224,8 +233,16 @@ sub only_groups_debugging {
 		@groups = ( \@h1_internal);
 		@names = ( "internal");
 	}
-	return (\@groups, \@names)
+	return (\@groups, \@names);
 }
+
+
+sub only_bloom {
+	my @groups = (\@h3_antigenic_bloom);
+	my @names = ("antigenic_bloom");
+	return (\@groups, \@names);
+}
+
 
 sub only_groups {
 	my $prot = shift;
@@ -236,8 +253,8 @@ sub only_groups {
 		@names = ("increased_binding", "antigenic", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "antigenic_ren", "entrenching");
 	}
 	elsif ($prot eq "h3"){
-		@groups = (\@h3_antigenic_steinbruck, \@h3_shih_epitopes, \@h3_antigenic,  \@h3_antigenic_smith, \@h3_antigenic_smith_full, \@h3_antigenic_koel, \@h3_antigenic_neher, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr, \@h3_acc, \@h3_sen);
-		@names = ("antigenic_steinbruck","shih_epitopes", "antigenic", "antigenic_smith", "antigenic_smith_full", "antigenic_koel", "antigenic_neher", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "entrenching", "senescing");	
+		@groups = (\@h3_antigenic_bloom, \@h3_antigenic_steinbruck, \@h3_shih_epitopes, \@h3_antigenic,  \@h3_antigenic_smith, \@h3_antigenic_smith_full, \@h3_antigenic_koel, \@h3_antigenic_neher, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr, \@h3_acc, \@h3_sen);
+		@names = ("antigenic_bloom","antigenic_steinbruck","shih_epitopes", "antigenic", "antigenic_smith", "antigenic_smith_full", "antigenic_koel", "antigenic_neher", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "entrenching", "senescing");	
 	}
 	elsif ($prot eq "n1"){
 		@groups = (\@n1_epitopes, \@n1_wan_epitopes, \@n1_pocket_closest, \@n1_surface, \@n1_thick_surface, \@n1_internal, \@n1_host_shift_001, \@n1_leading_kr, \@n1_trailing_kr);
@@ -247,15 +264,15 @@ sub only_groups {
 		@groups = (\@n2_epitopes, \@n2_pocket_closest, \@n2_surface, \@n2_internal, \@n2_host_shift_001, \@n2_leading_kr, \@n2_trailing_kr, \@n2_decreasing, \@n2_increasing, \@n2_acc, \@n2_sen);
 		@names = ("epitopes", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "decreasing", "increasing", "entrenching", "senescing");
 	}
-	elsif ($prot eq "h1pandemic"){
-		@groups = (\@h1pandemic_internal,\@h1pandemic_surface,\@h1pandemic_thicksurface);
-		@names = ("internal","surface","thicksurface");
+	elsif ($prot eq "h1pandemic" || $prot eq "h1pdm"){
+		@groups = (\@h1pandemic_internal,\@h1pandemic_surface,\@h1pandemic_thicksurface, \@h1pandemic_epitopes);
+		@names = ("internal","surface","thicksurface", "epitopes");
 	}
-	elsif ($prot eq "n1pandemic"){
-		@groups = (\@n1pandemic_internal,\@n1pandemic_surface,\@n1pandemic_thicksurface);
-		@names = ("internal","surface","thicksurface");
+	elsif ($prot eq "n1pandemic"  || $prot eq "n1pdm"){
+		@groups = (\@n1pandemic_internal,\@n1pandemic_surface,\@n1pandemic_thicksurface, \@n1pandemic_epitopes);
+		@names = ("internal","surface","thicksurface", "epitopes");
 	}
-	return (\@groups, \@names)
+	return (\@groups, \@names);
 }
 
 

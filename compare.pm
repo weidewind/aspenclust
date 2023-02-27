@@ -5,14 +5,15 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(new get_synmuts count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(comparator get_synmuts count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Tools::CodonTable;
 use Class::Struct;
 use Carp;
 use Devel::StackTrace;
 
-struct Substitution => {
+
+struct Supstitution => {
 	position => '$',
 	ancestral_allele => '$',
 	derived_allele => '$'
@@ -21,7 +22,7 @@ struct Substitution => {
 
 
 
-sub new {
+sub comparator {
 	my $class = shift;
 	my $codon_table = Bio::Tools::CodonTable->new();
 	my %possible_subs = (
@@ -86,7 +87,7 @@ sub count_substitutions{
 		if($aaa eq $aa){
 			push @{$ra_syn},$n;
 		}else{
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position($n);
 			$p->ancestral_allele($aaa);
 			$p->derived_allele($aa);
@@ -126,7 +127,7 @@ sub nsyn_substitutions{
 		while($cod=~m/-/g){$n++};
 		$n=($i-$rCDS->[0]-$n)/3+1;
 		if($aaa ne $aa){
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position($n);
 			$p->ancestral_allele($aaa);
 			$p->derived_allele($aa);
@@ -169,7 +170,7 @@ sub nsyn_substitutions_codons{
 		while($codprev=~m/-/g){$n++};
 		$n=($i-$rCDS->[0]-$n)/3+1;
 		if($aaa ne $aa){
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position($n);
 			$p->ancestral_allele($acod);
 			$p->derived_allele($cod);
@@ -212,7 +213,7 @@ sub syn_substitutions{
 		while($codprev=~m/-/g){$n++};
 		$n=($i-$rCDS->[0]-$n)/3+1;
 		if($aaa eq $aa){
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position($n);
 			$p->ancestral_allele($acod);
 			$p->derived_allele($cod);
@@ -233,15 +234,15 @@ sub is_neighbour_changing {
 	if (!$full){
 		$full = 0;
 	}
-	if (exists $self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full}){
-		return $self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full};
+	if (exists $self->{neighbour_hash}{$subst->{"Supstitution::ancestral_allele"}}{$subst->{"Supstitution::derived_allele"}}{$full}){
+		return $self->{neighbour_hash}{$subst->{"Supstitution::ancestral_allele"}}{$subst->{"Supstitution::derived_allele"}}{$full};
 	}
 	else {
 	
 	my $codonTable = $self->{codon_table};
 	
-	my %anc_neighbours = $self->get_neighbours($subst->{"Substitution::ancestral_allele"});
-	my %der_neighbours = $self->get_neighbours($subst->{"Substitution::derived_allele"});
+	my %anc_neighbours = $self->get_neighbours($subst->{"Supstitution::ancestral_allele"});
+	my %der_neighbours = $self->get_neighbours($subst->{"Supstitution::derived_allele"});
 	
 	my $answer = 0;
 	if (length(keys %anc_neighbours) != length(keys %der_neighbours)){
@@ -264,19 +265,19 @@ sub is_neighbour_changing {
 		}
 	}
 	
-	$self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full} = $answer;
+	$self->{neighbour_hash}{$subst->{"Supstitution::ancestral_allele"}}{$subst->{"Supstitution::derived_allele"}}{$full} = $answer;
 	return $answer;
 	}
 
 }
 
 sub test_is_neighbour_changing{
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position(5);
 			$p->ancestral_allele("CCT");
 			$p->derived_allele("CCC");
 			print is_neighbour_changing($p, 1);
-			my $p=Substitution->new();
+			my $p=Supstitution->new();
 			$p->position(5);
 			$p->ancestral_allele("CCA");
 			$p->derived_allele("CCC");

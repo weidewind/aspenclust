@@ -1,0 +1,263 @@
+
+
+```{r}
+library(seqinr)
+library(readxl)
+library(gghighlight)
+library(Biostrings)
+library(ggplot2)
+
+protein = "h3"
+
+## Read data and convert ancestor codons to amino acids
+allele_stat = read_excel(paste(c("C:/Users/Дмитрий/Documents/workspace/aspenclust/output/knownpass/megasplits/test10000/nsyn/mostlikely/weightnorm/Alleles.xlsx"), collapse = ""), sheet = protein)
+colnames(allele_stat) = c("protein", "site", "ancder", "par", "div", "diff", "pvalue")
+allele_stat = data.frame(allele_stat)
+allele_stat$site = as.character(allele_stat$site)
+aa_anc = sapply(substr(allele_stat$ancder,1,3), function(c){seqinr::translate(unlist(strsplit(c,split="")))})
+allele_stat$codon_aa_anc = paste(aa_anc, substr(allele_stat$ancder,1,3), sep="_")
+allele_stat$aa_anc = aa_anc
+allele_stat$aa_der = substr(allele_stat$ancder,4,4)
+
+## Calculate radicality 
+data(PAM30)
+allele_stat$radicality = apply(allele_stat, 1, function(row){
+  -PAM30[row["aa_anc"],row["aa_der"]]
+})
+
+## plot pvalue(radicality) for every Codon->aminoacid in site i
+ggplot(allele_stat, aes(x=radicality, y=pvalue, group = codon_aa_anc, col = codon_aa_anc))+geom_jitter(size = 1, height = 0) +geom_smooth(method = "lm",se     = FALSE) + ggtitle("all subs; grouped by codon")
+ggplot(allele_stat, aes(x=radicality, y=pvalue, group = aa_anc, col = aa_anc))+geom_jitter(size = 1, height = 0) +geom_smooth(method = "lm",se     = FALSE) + ggtitle("all subs; grouped by aa")
+# + gghighlight(pvalue< 0.01)
+
+## let's take sites with significant alleles and draw a plot with all alleles 
+ggplot(allele_stat[allele_stat$pvalue < 0.01 | allele_stat$site %in% allele_stat[allele_stat$pvalue < 0.01, "site"],], aes(x=radicality, y=pvalue, group = interaction(site, codon_aa_anc), color = interaction(site, codon_aa_anc)))+geom_point(size = 3) +geom_smooth(method = "lm",se     = FALSE)+ ggtitle("alleles with clustered subs")
+
+## now show two sites with many ancestral alleles separately, just to clean up this mess
+ggplot(allele_stat[allele_stat$site %in% c("160", "161"),], aes(x=radicality, y=pvalue, group = interaction(site, codon_aa_anc), color = interaction(site, codon_aa_anc)))+geom_point(size = 3) +geom_smooth(method = "lm",se     = FALSE)+ ggtitle("alleles with clustered subs")
+ggplot(allele_stat[allele_stat$site %in% c("154", "137", "509", "172", "278", "235"),], aes(x=radicality, y=pvalue, group = interaction(site, codon_aa_anc), color = interaction(site, codon_aa_anc)))+geom_point(size = 3) +geom_smooth(method = "lm",se     = FALSE)+ ggtitle("alleles with clustered subs")
+
+#same for best sites
+ggplot(allele_stat[allele_stat$site %in% site_stat[site_stat$pvalue < 0.01, "site"],], aes(x=radicality, y=pvalue, group = interaction(site, codon_aa_anc), color = interaction(site, codon_aa_anc)))+geom_point(size = 3) +geom_smooth(method = "lm",se     = FALSE)+ ggtitle("sites with clustered subs, lm sites separately")
+
+
+#sapply(c("S", "N","A","D","H", "R", "G","P", "L", "E"), function(aa){
+ # p = ggplot(allele_stat[allele_stat$aa_anc == aa,], aes(x=radicality, y=pvalue))+geom_point(size = 1)+stat_smooth(method = "lm") + ggtitle(aa)
+#  print(p)
+#})
+
+diff_lm = lm(data = allele_stat, diff~radicality)
+ggplot(allele_stat, aes(x=radicality, y=diff))+geom_jitter(size = 1, height = 0)+geom_smooth(method = "lm",se     = FALSE) + ggtitle("all subs")
+#+ gghighlight(pvalue<0.05)
+
+
+ggplot(allele_stat) + geom_jitter(aes(x=codon_aa_anc, y = radicality)) + gghighlight(pvalue< 0.01)+ ggtitle("all subs; alleles with pvlue<0.01 highlighted")
+
+cor.test(allele_stat$radicality, allele_stat$pvalue, method = "spearman")
+cor.test(allele_stat$radicality, allele_stat$diff, method = "spearman")
+
+```
+
+
+
+```{r}
+library(ggplot2)
+library(seqinr)
+
+
+assemble_data = function(protein, radicality_matrix){
+        site_stat = read_excel(paste(c("C:/Users/Дмитрий/Documents/workspace/aspenclust/output/knownpass/megasplits/test10000/nsyn/mostlikely/weightnorm/Sites_with_FDR.xlsx"),
+                                    collapse = ""), sheet = protein)
+        site_stat = data.frame(site_stat)
+        colnames(site_stat) = c("protein", "site", "subs", "par", "div", "diff", "pvalue", "fdr")
+        
+        dat = read.csv2(paste(c("C:/Users/Дмитрий/Documents/workspace/aspenclust/output/knownpass/radicality/",
+                                protein,"_distances.csv"), collapse = ""), sep = ",")
+        dat$distance = as.numeric(dat$distance)
+        dat$pvalue = sapply(dat$site, function(ind){
+          site_stat[site_stat$site == ind, "pvalue"]
+        })
+        dat$allele = paste(dat$site, dat$anc_codon, dat$anc_aa, sep = "_")
+        dat$grandallele = paste(dat$site, dat$grandanc_codon, dat$grandanc_aa, sep = "_")
+        
+        if (radicality_matrix == "PAM"){
+            ## Calculate radicality from PAM
+            data(PAM30)
+            dat$radicality = apply(dat, 1, function(row){
+              -PAM30[row["anc_aa"],row["der_aa"]]
+            })
+            
+            dat$grandradicality = apply(dat, 1, function(row){
+              -PAM30[row["grandanc_aa"],row["der_aa"]]
+            })
+        }else if (radicality_matrix == "Miyata"){
+            ## Calculate radicality by Miyata's distance
+            miyata.tib = read_excel("C:/Users/Дмитрий/Documents/CMD/aspens/Miyata.xls", col_names = TRUE)
+            miyata = data.frame(miyata.tib[,2:21])
+            colnames(miyata) = a(colnames(miyata))
+            row.names(miyata) = a(unlist(miyata.tib[,1]))
+            dat$radicality = apply(dat, 1, function(row){
+              as.numeric(miyata[row["anc_aa"],row["der_aa"]])
+            })
+            
+            dat$grandradicality = apply(dat, 1, function(row){
+              as.numeric(miyata[row["grandanc_aa"],row["der_aa"]])
+            })
+        }
+        return(dat)
+}
+
+plot_radicality_to_distance<-function(mydata, radtype,  data_title, anctype, colorby, radicality_matrix, rho=NULL){
+              mean_dist <- aggregate(mydata$distance, by = list(mydata[[anctype]], mydata$site), mean)
+              mean_rad <- aggregate(mydata[[radtype]], by = list(mydata[[anctype]], mydata$site), mean)
+              means = data.frame(anc = mean_dist$Group.1, site = mean_dist$Group.2, mean_dist = mean_dist$x, mean_rad = mean_rad$x)
+              
+              p = ggplot(mydata, aes(x=distance,y=get(radtype), 
+                                     group = interaction(get(anctype), site),
+                                     col = get(colorby))) + 
+                geom_point(size = 1) + 
+                geom_smooth(method = "lm",se = FALSE) + 
+                ylab(radtype)+ 
+                ggtitle(paste(c(protein, radicality_matrix, data_title, " lm sites separately"), collapse = ","))
+              p = p + geom_text(data = means, inherit.aes=FALSE, aes(x = mean_dist, y = mean_rad, label = site))
+              print(p)
+          
+          ## Was used for separating sites with neg and pos correlation, for better plotting. Wasn't successful enough
+            #print(ggplot(data[rho[mydata$anc_codon] >= 0 | is.na(rho[mydata$anc_codon]),], aes(x=distance,y=get(radtype), group = anc_codon, col = anc_aa))+geom_point(size = 1) +geom_smooth(method = "lm",se     = FALSE)+ ylab(radtype) + ggtitle(paste(c(data_title, "AA non-negative cor"), collapse = ",")))
+            #print(ggplot(mydata[rho[mydata$anc_codon] <0,], aes(x=distance,y=get(radtype), group = anc_codon, col = anc_aa))+geom_point(size = 1) +geom_smooth(method = "lm",se     = FALSE)+ ylab(radtype) + ggtitle(paste(c(data_title, "AA negative cor"), collapse = ",")))
+        }
+
+analyze_radicality_to_distance = function(protein, radicality_matrix, pvalue_threshold){
+       dat = assemble_data(protein, radicality_matrix)
+        
+        ## Was used for separating sites with neg and pos correlation, for better plotting. Wasn't successful enough
+        # get_rho = function(data, radtype){
+        #       aa_rho = sapply(unique(data$anc_codon), function(codon){
+        #       subdat = data[data$anc_codon == codon,]
+        #       if(nrow(subdat) < 10){NA}else{
+        #         res = cor.test(subdat[[radtype]], subdat$distance, method = "spearman", exact = FALSE)
+        #         res$estimate
+        #       }
+        #     })
+        #     names(aa_rho) = unique(data$anc_codon)
+        #     return(aa_rho)
+        # }
+        # 
+        # get_rho_pval = function(data, radtype){
+        #       aa_rho = sapply(unique(data$anc_codon), function(codon){
+        #       subdat = data[data$anc_codon == codon,]
+        #       if(nrow(subdat) < 10){NA}else{
+        #         res = cor.test(subdat[[radtype]], subdat$distance, method = "spearman", exact = FALSE)
+        #         res$rt$p.value
+        #       }
+        #     })
+        #     names(aa_rho) = unique(data$anc_codon)
+        #     return(aa_rho)
+        # }
+      
+        
+        ## PLOT
+        
+        
+        #bestdat = dat[dat$site %in% site_stat[site_stat$pvalue < pvalue_threshold, "site"],]
+        bestdat = dat[dat$pvalue < pvalue_threshold,]
+        
+        ## Was used for separating sites with neg and pos correlation, for better plotting. Wasn't successful enough
+        #c_rho = get_rho(mydata = dat,radtype = "radicality")
+        #grandc_rho = get_rho(dat,"grandradicality")
+        #best_c_rho = get_rho(mydata = bestdat,radtype = "radicality")
+        #best_grandc_rho = get_rho(bestdat,"grandradicality")
+        #best_grandc_pval = get_rho_pval(bestdat,"grandradicality")
+        
+        #plot_radicality_to_distance(dat, radtype="radicality",   data_title="all sites",anctype = "anc_codon", colorby="anc_aa")            #c_rho,
+        #plot_radicality_to_distance(dat, radtype="grandradicality",  data_title="all sites",anctype = "grandanc_codon", colorby="grandanc_aa") #grandc_rho, 
+        plot_radicality_to_distance(bestdat, radtype="radicality",   radicality_matrix = radicality_matrix,
+                                    data_title="sites with clustering", anctype = "anc_codon", colorby="anc_aa") #best_c_rho,
+        plot_radicality_to_distance(bestdat, radtype="grandradicality", radicality_matrix = radicality_matrix,
+                                    data_title="sites with clustering", anctype = "grandanc_codon", colorby="grandanc_aa") #best_grandc_rho, 
+
+}
+
+
+analyze_radicality_to_distance("h3", "Miyata", 0.015)
+analyze_radicality_to_distance("h3", "PAM", 0.015)
+
+```
+```{r}
+library(lme4)
+library(readxl)
+  
+test_models = function(data, tag){
+        print(paste(c("Non-nested, grandradicality, ", tag), collapse = ""))
+        best.grand.rad.model = lmer(formula = grandradicality ~ distance + (distance||site) + (distance||grandanc_codon), data = data, REML=FALSE) # (distance||site): allow varying intercept and slope for each site; intercept and slope are not correlated
+        best.grand.rad.null =lmer(formula = grandradicality ~  (1|site) + (1|grandanc_codon), data = data, REML=FALSE) 
+
+        print(summary(best.grand.rad.model))
+        print(coef(best.grand.rad.model))
+        plot(fitted(best.grand.rad.model), residuals(best.grand.rad.model))
+        qqnorm(residuals(best.grand.rad.model))
+        
+        print(summary(best.grand.rad.null))
+        print(anova(best.grand.rad.null,  best.grand.rad.model))
+        # (distance||site): allow varying intercept and slope for each site; intercept and slope are not correlated ((distance|site) - intercept and slope are correlated; (1|site) - only intercept varies for each site)
+        # REML=FALSE is necessary when you compare models using the likelihood ratio test
+        
+        print(paste(c("Non-nested, dradicality, ", tag), collapse = ""))
+        best.rad.model = lmer(formula = radicality ~ distance + (distance || anc_codon) + (distance||site), data = data, REML=FALSE) 
+        best.rad.null = lmer(formula = radicality ~  (1 | anc_codon) + (1 |site), data = data, REML=FALSE) 
+        
+        print(summary(best.rad.model))
+        print(coef(best.rad.model))
+        plot(fitted(best.rad.model), residuals(best.rad.model))
+        qqnorm(residuals(best.rad.model))
+        
+        print(summary(best.rad.null))
+        print(anova(best.rad.null,  best.rad.model))
+}
+
+test_nested_models = function(data, tag){
+        print(paste(c("Nested, grandradicality, ", tag), collapse = ""))
+        best.grand.rad.model = lmer(formula = grandradicality ~ distance + (distance||site/grandanc_codon) + (distance||grandanc_codon), data = data, REML=FALSE)
+        best.grand.rad.null =lmer(formula = grandradicality ~  (1|site/grandanc_codon), data = data, REML=FALSE)
+        
+        print(summary(best.grand.rad.model))
+        print(coef(best.grand.rad.model))
+        plot(fitted(best.grand.rad.model), residuals(best.grand.rad.model))
+        qqnorm(residuals(best.grand.rad.model))
+        
+        print(summary(best.grand.rad.null))
+        print(anova(best.grand.rad.null,  best.grand.rad.model))
+          
+        print(paste(c("Nested, radicality, ", tag), collapse = ""))
+        best.rad.model = lmer(formula = radicality ~ distance + (distance || site/anc_codon), data = data, REML=FALSE) 
+        best.rad.null = lmer(formula = radicality ~  (1 |site/anc_codon), data = data, REML=FALSE) 
+        
+        print(summary(best.rad.model))
+        print(coef(best.rad.model))
+        plot(fitted(best.rad.model), residuals(best.rad.model))
+        qqnorm(residuals(best.rad.model))
+        
+        print(summary(best.rad.null))
+        print(anova(best.rad.null,  best.rad.model))
+}
+
+
+dat = assemble_data(protein = "h3", radicality_matrix = "PAM")
+bestdat = dat[dat$pvalue < 0.015,]
+test_models(dat, "PAM, all sites")
+test_models(bestdat, "PAM, best sites")
+test_nested_models(dat, "PAM, all sites")
+test_nested_models(bestdat, "PAM, best sites")
+
+dat = assemble_data(protein = "h3", radicality_matrix = "Miyata")
+bestdat = dat[dat$pvalue < 0.015,]
+test_models(dat, "Miyata, all sites")
+test_models(bestdat,  "Miyata, best sites")
+test_nested_models(dat, "Miyata, all sites")
+test_nested_models(bestdat,  "Miyata, best sites")
+
+
+
+
+
+```

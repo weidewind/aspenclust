@@ -235,6 +235,107 @@ sub alleles_stats {
 	else { return $outfile;}
 }
 
+#analyse ancestors (all alleles in one site, that arose on the same background)
+sub ancestors_stats {
+	my $args = shift;
+	my @names = qw(mutmap simnumber sites verbose stattype norm fake); # fake is a number (fake id)
+	my ($mutmap, $simnumber, $sites, $verbose, $stattype, $norm, $fake) = map {$args->{$_}} @names;
+	
+	$sites = [1..$mutmap->{static_length}] unless ($sites) ;
+	my %subs_on_node = %{$mutmap->{static_subs_on_node}};
+	my %nodes_with_sub = %{$mutmap->{static_nodes_with_sub}};
+
+	my $path = $mutmap->pathFinder({norm => $norm});
+	my $outfile;
+	if (!$fake){
+		$outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_ancestors_".$stattype."_statistics");	
+		open OUT, ">$outfile" or die "cannot create output file $outfile: $!";
+	}
+	else {
+		$outfile = File::Spec->catfile($path, $mutmap->{static_protein}."_".$mutmap->{static_state}."_ancestors_".$stattype."_statistics_FDR_".$fake);	
+		open OUT, ">$outfile" or die "cannot open output file $outfile: $!";
+	}
+
+	my %pvalues;
+	if ($fake) {print OUT ">site\tanc_allele\tsame_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";}
+	for my $ind(@{$sites}){
+		next unless ($nodes_with_sub{$ind});
+		my %bootstrap_median_diff;
+		unless ($fake){print OUT ">debug site $ind \n";}
+		my %distr = find_all_distances_probs($mutmap, $ind, $fake);
+		if ($verbose & !$fake) {
+			print OUT "output from find_all_distances_probs. Same [dist, prob?], Diff[dist, prob], [same count, diff count]\n";
+			print OUT (Dumper(\%distr));
+			print OUT "node,anc,der,prob\n";
+			foreach my $node (@{$nodes_with_sub{$ind}}){
+				my @sorted =  sort { $b->{"Substitution::probability"} <=> $a->{"Substitution::probability"} } @{$subs_on_node{${$node}->get_name()}->{$ind}};
+				foreach my $sub(@sorted){
+					print OUT ${$node}->get_name().",".$sub->{"Substitution::ancestral_allele"}.",".$sub->{"Substitution::derived_allele"}.",".$sub->{"Substitution::probability"}."\n";
+				}
+			}
+		}
+		unless ($fake) {
+			print OUT "key\tsame_count\tdiff_count\n";
+			foreach my $k (keys %distr){
+				print OUT $k."\t".$distr{$k}[2][0]."\t".$distr{$k}[2][1]."\n"; # distr{$anc$der$num}[2] = (same, diff)
+			}
+		}
+		
+		my @bins = distr_to_stathist_probs(\%distr, $norm, "ancs_separately"); 
+		# if ($verbose & !$fake) {
+			# close OUT;
+			# my $header = "Histogram for site $ind\n";
+			# print_histogram(\@bins, $outfile, $header);
+			# open OUT, ">>$outfile" or die "cannot create output file $outfile: $!";
+		# }
+		
+		my %same_median;
+		my %diff_median;
+		my %obs_difference;
+		foreach my $anc (keys %{$bins[0]}){
+			$same_median{$anc} = hist_average(\%{$bins[0]->{$anc}}, $stattype);
+			$diff_median{$anc}  = hist_average(\%{$bins[1]->{$anc}}, $stattype);
+			$obs_difference{$anc}  = $diff_median{$anc}-$same_median{$anc};
+		}
+
+
+		for (my $t = 0; $t < $simnumber; $t++){
+			foreach my $anc (keys %{$bins[0]}){
+				my %shuffled_distr = find_all_distances_probs($mutmap, $ind, "shuffle");
+				my @shuffler_bins = distr_to_stathist_probs(\%shuffled_distr, $norm, "ancs_separately");
+				push @{$bootstrap_median_diff{$anc}}, hist_average(\%{$shuffler_bins[1]->{$anc}}, $stattype)-hist_average(\%{$shuffler_bins[0]->{$anc}}, $stattype);
+			}
+		}
+		
+		my %pvalue;
+		foreach my $anc (keys %{$bins[0]}){
+			my @sorted_bootstrap = sort {$a <=> $b} @{$bootstrap_median_diff{$anc}};
+			$pvalue{$anc} = 0;
+			for (my $i = 0; $i < $simnumber; $i++){
+				if($sorted_bootstrap[$i] >= $obs_difference{$anc}){
+					$pvalue{$anc} = ($simnumber - $i)/$simnumber;
+					last;
+				}
+			}
+			if (!$fake) {print OUT ">site\tanc\tsame_$stattype\tdiff_$stattype\t".$stattype."_difference\tpvalue\n";}
+			print OUT $ind."\t";
+			print OUT $anc."\t";
+			print OUT $same_median{$anc}."\t"; #this have to be the median of "same" statistics
+			print OUT $diff_median{$anc}."\t"; #this have to be the median of "diff" statistics
+			print OUT $obs_difference{$anc}."\t";
+			print OUT $pvalue{$anc};
+			print OUT "\n";
+			if ($fake){
+				$pvalues{$ind}{$anc} = $pvalue{$anc};
+			}
+		}
+		
+	}
+	close OUT;
+	if ($fake){ return %pvalues;}
+	else { return $outfile;}
+}
+
 
 # analyze sites
 sub single_sites_stats {
@@ -668,9 +769,10 @@ sub find_all_distances_probs {
 			}
 	}
 	#print ("site $site_index\n");	
-	#print Dumper(\%hash_of_nodes);
+	print Dumper(\%hash_of_nodes);
 	my %node_subsets;
 	my %shuffleds;
+	print "Shuffle? $shuffle\n";
 	foreach my $ancestor (keys %hash_of_nodes){
 	#print $ancestor."\n";	
 		my @nodes_subset =  values %{$hash_of_nodes{$ancestor}};
@@ -689,7 +791,8 @@ sub find_all_distances_probs {
 		$node_subsets{$ancestor} = \@nodes_subset;
 		$shuffleds{$ancestor} = \@shuffled;
 		for (my $i = 0; $i < scalar @nodes_subset; $i++){
-		#print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
+		print ${$nodes_subset[$i]}->get_name()."\n" unless $shuffle;
+		
 		#print Dumper($subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}) unless $shuffle;
 			foreach my $sub1 (@{$subs_on_node{${$nodes_subset[$i]}->get_name()}{$site_index}}){
 					next if $sub1->{"Substitution::ancestral_allele"} ne $ancestor; 
@@ -771,7 +874,9 @@ sub split_shuffling {
 	for (my $i = 0; $i < scalar @nodes_subset; $i++){
 		my $nname = ${$nodes_subset[$i]}->get_name();
 		my $type = $node_partition{$nname};
-		$parts{$type}{$i} = $nodes_subset[$i];
+		foreach my $chartype (split //, $type) { # cycle added at 26.02.2021
+			$parts{$chartype}{$i} = $nodes_subset[$i];
+		}
 	}
 	my %whole_hash;
 	foreach my $type(keys %parts){
@@ -861,11 +966,16 @@ sub distr_to_stathist_probs {
 					#print "Printing unique distances\n";
 					my @alldists = uniq(keys %stemp, keys %dtemp); 
 					#print Dumper (\@alldists);
-					my $ancestor_derived = $subst =~ s/[0-9]//gr; 
+					my $ancestor_derived = $subst =~ s/[0-9]//gr;
+					my $ancestor = substr($ancestor_derived,0,3);
 					foreach my $interval(@alldists){
-						if ($separately){
+						if ($separately eq  "separately"){
 							$bins[0]->{$ancestor_derived}->{$interval} += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
 							$bins[1]->{$ancestor_derived}->{$interval} += $dtemp{$interval}/$d_weights_sum; # 10/10/2019 added $pruned_distr{$subst}->[3]* to both 
+						}
+						elsif($separately eq  "ancs_separately"){
+							$bins[0]->{$ancestor}->{$interval} += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1
+							$bins[1]->{$ancestor}->{$interval} += $dtemp{$interval}/$d_weights_sum; # 10/10/2019 added $pruned_distr{$subst}->[3]* to both 
 						}
 						else{
 							$bins[0]->{$interval} += $stemp{$interval}/$s_weights_sum; # $mutgroups_count - for integral over all intervals to be 1

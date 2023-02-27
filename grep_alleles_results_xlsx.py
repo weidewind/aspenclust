@@ -9,6 +9,7 @@ import re
 
 ## take options: input folder, output tag
 parser = argparse.ArgumentParser(description='Collect the results of global analysis into xlsx')
+parser.add_argument("--type", dest='type', default='alleles', type=str, help="alleles or ancestors")
 parser.add_argument("--input", dest='folder', type=str, help="full path to the folder containing results")
 args = parser.parse_args()
 
@@ -17,11 +18,11 @@ prots = []
 
 take_nonempty = lambda s1, s2: s1 if s2.isna().all() else s2
 
-def get_files(folder):
+def get_files(folder, type):
 	files = []
 	for r, d, f in os.walk(folder):
 		for file in f:
-			if "_alleles_" in file:
+			if "_" + type + "_" in file:
 				files.append(file)
 	files.sort()
 	proteins = np.unique([f.split("_")[0] for f in files])
@@ -29,13 +30,14 @@ def get_files(folder):
 	print(proteins)
 	return files, proteins
 
-files, proteins = get_files(args.folder)
+files, proteins = get_files(args.folder, args.type)
 
 ## foreach file - read the results, parse them and write to a dataframe
 def parse_file(folder, filename,prots):
 	with open(os.path.join(folder, filename)) as f:
 		spl = filename.split("_") # $protein_$state_global_$statype_statistics
-		newdf = pd.DataFrame(columns=['protein','site', 'ancder', 'parallel_'+spl[3], 'divergent_'+spl[3],'difference_'+spl[3], 'pvalue_'+spl[3]])
+		subtype = "ancder" if args.type == "alleles" else "anc"
+		newdf = pd.DataFrame(columns=['protein','site', subtype, 'parallel_'+spl[3], 'divergent_'+spl[3],'difference_'+spl[3], 'pvalue_'+spl[3]])
 		lines = f.readlines()
 		prots.append(spl[0])
 		num = 0
@@ -44,7 +46,7 @@ def parse_file(folder, filename,prots):
 			if re.match(r'^>site', lines[num]):
 				res = lines[num+1].strip()
 				values = res.split("\t")
-				row = pd.Series({'protein':spl[0],'site':values[0], 'ancder':values[1], 'parallel_'+spl[3]:values[2], 'divergent_'+spl[3]:values[3], 'difference_'+spl[3]:values[4], 'pvalue_'+spl[3]:values[5]})
+				row = pd.Series({'protein':spl[0],'site':values[0], subtype:values[1], 'parallel_'+spl[3]:values[2], 'divergent_'+spl[3]:values[3], 'difference_'+spl[3]:values[4], 'pvalue_'+spl[3]:values[5]})
 				newdf.loc[len(newdf.index)] = row
 			num += 1
 		return (newdf)
@@ -68,7 +70,7 @@ else:
 	else:
 		df = mediandf
 # Create a Pandas Excel writer using XlsxWriter as the engine.
-output = os.path.join(args.folder,'Alleles'+'.xlsx')
+output = os.path.join(args.folder, args.type.capitalize() + '.xlsx')
 writer = pd.ExcelWriter(output, engine='xlsxwriter',datetime_format='YYYY-MM-DD HH:MM:SS',options={'strings_to_numbers': True}) 
 # Add a format. Green fill with dark green text.
 workbook = writer.book

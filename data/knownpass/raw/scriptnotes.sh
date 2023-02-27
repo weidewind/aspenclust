@@ -104,7 +104,26 @@ parallel python stateToFasta.py --input clustered/{1}.readystrains.fa.state --ou
 # passages for our strains in fasta-format
 parallel python passagesToFasta.py --fasta clustered/{1}.readystrains.fa --passages {1}.passages --output clustered/{1}.passages.fa ::: h1 n1 h1pdm n1pdm n2 h3
 
-parallel  iqtree -s {1}.passages.fa -st MORPH -te {1}.treefile.rerooted -asr  ::: h1 n1 h1pdm n1pdm n2 h3
+#recontsruct ancestral states by mega
+./reconstrust_passage_states.sh
+
+#parse mega output
+parallel perl ../../../../flutils/parse_mega_ancestors_output.pl --protein {1} --statefile {1}.passages.asletters.ancestral_states.txt --nodemapfile {1}.passages.asletters.nodeMap.txt --tree_file {1}.treefile.rerooted --output {1}.passages.ancstates2 --folder clustered/ ::: h1 n1 h1pdm n1pdm h3 n2
+
+# todo ... rename and cp splits..
+parallel cp clustered/{1}.passages.ancstates2 ../megasplits/{1}.splits ::: h1 n1 h1pdm n1pdm n2 h3
+
+parallel cp clustered/{1}.treefile.rerooted ../{1}.l.r.newick ::: h1 n1 h1pdm n1pdm n2 h3
+parallel perl -pi -e 's/A/a/g' clustered/{1}.internal.fa ::: h1 n1 h1pdm n1pdm n2 h3
+parallel perl -pi -e 's/C/c/g' clustered/{1}.internal.fa ::: h1 n1 h1pdm n1pdm n2 h3
+parallel perl -pi -e 's/T/t/g' clustered/{1}.internal.fa ::: h1 n1 h1pdm n1pdm n2 h3
+parallel perl -pi -e 's/G/g/g' clustered/{1}.internal.fa ::: h1 n1 h1pdm n1pdm n2 h3
+
+parallel "cp clustered/{1}.readystrains.fa ../{1}.nointernals.fa" ::: h1 n1 h1pdm n1pdm n2 h3
+parallel "cp clustered/{1}.internal.fa ../{1}.ancestor.fa" ::: h1 n1 h1pdm n1pdm n2 h3
+
+
+#parallel  iqtree -s {1}.passages.fa -st MORPH -te {1}.treefile.rerooted -asr  ::: h1 n1 h1pdm n1pdm n2 h3
 #parallel iqtree -s {1}.max2ambichar.trimmed.realigned -m MFP -nt 16 ::: h1 n1 h1pdm n1pdm h3 n2
 #to find which sequences are clustered with the strange ones visible in iqtree alignment
 #parallel cd-hit -i h3.max2ambichar.strains.fa -o {1}.max2ambichar.strains.clustered1.fa -c 1 ::: h1 n1 h1pdm n1pdm h3 n2

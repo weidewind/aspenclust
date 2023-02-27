@@ -5,7 +5,7 @@ use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 use List::Util qw(min max);
-use compare qw(new);
+use compare;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
 @EXPORT = qw(parse_fasta read_xpar parse_site_pair_distances parse_likelihoods parse_likelihoods_csv parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods parse_splits) ; # Symbols to autoexport (:DEFAULT tag)
@@ -51,7 +51,7 @@ sub read_xpar{
 			foreach my $ind(@inds){
 				my $ind = $ind =~ m/([0-9]+)/;
 				$ind = $1;
-				my $p=Substitution->new();
+				my $p=Supstitution->new();
 				$p->position($ind);
 				$p->ancestral_allele("ATG");
 				$p->derived_allele("ATG");
@@ -83,11 +83,16 @@ sub parse_site_pair_distances {
 		my ($dist, $count) = split(/\s+/, <STAT>);
 		my $f = min($fsite, $ssite);
 		my $s = max($fsite, $ssite);
+		## debugging
+		# $hash{$f}{$s} = ();
+		# $hash{$f}{$s}[0] += $dist;
+		# $hash{$f}{$s}[1] += $count;
 		if (!exists $hash{$f}{$s}){
 			$hash{$f}{$s} = ();
 		}
 		$hash{$f}{$s}[0] += $dist;
 		$hash{$f}{$s}[1] += $count;
+
 	}
 	close PAIRS;
 	close STAT;

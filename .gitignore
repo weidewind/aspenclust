@@ -2,3 +2,6 @@
 /nytprof
 /output
 /data
+!/data/knownpass/raw/*.py
+!/data/knownpass/raw/*.sh
+!/data/knownpass/raw/*.pl

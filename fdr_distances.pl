@@ -67,7 +67,7 @@ foreach my $fakenum(@fakenums){
 
 ##
 ## Forkmanager setup
-my $manager = new Parallel::ForkManager(10);
+my $manager = new Parallel::ForkManager(30);
 
 $manager->run_on_start( 
 	  sub {

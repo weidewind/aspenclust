@@ -11,11 +11,12 @@ import re
 parser = argparse.ArgumentParser(description='Collect the results of global analysis into xlsx')
 parser.add_argument("--input", dest='analysis_folder', type=str, help="full path to the folder containing analysis results")
 parser.add_argument("--fdr", dest='fdr_folder', type=str, help="full path to the folder containing fdr results")
+parser.add_argument("--state", dest='state', type=str, help="syn or nsyn")
 parser.add_argument("--filter", dest='filter', type=str)
 #parser.add_argument("--protein", dest='prot', type=str)
 args = parser.parse_args()
 
-proteins = ["h1", "n1", "n2", "h3", "h1pandemic", "n1pandemic"]
+proteins = ["h1", "n1", "n2", "h3", "h1pandemic", "n1pandemic", "h1pdm", "n1pdm"]
 tofilter = []
 if (args.filter):
 	tofilter = args.filter.split(",")
@@ -30,7 +31,7 @@ wrapit = workbook.add_format({'text_wrap':True,'align': 'left', 'border':1,'bold
 
 
 for prot in proteins:
-	fdrfile = os.path.join(args.fdr_folder, prot+'_nsyn_mean_group_FDR')
+	fdrfile = os.path.join(args.fdr_folder, prot+'_'+args.state+'_mean_group_FDR')
 	if ( not os.path.exists(fdrfile)):
 		continue
 	fdrdf = pd.read_csv(fdrfile,  sep='	', names= ["fake", "group_name", "group_pvalue", "enrich_pvalue"])

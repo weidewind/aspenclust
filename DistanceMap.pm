@@ -11,7 +11,7 @@ use Getopt::Long;
 use Data::Dumper;
 use DistanceFinder qw(get_mrcn calc_true_patristic_distance node_distance mock_distance);
 use Parsers qw(parse_tree parse_fasta read_xpar parse_site_pair_distances);
-use compare qw(new);
+#use compare qw(mynew);
 
 
 $| = 1;

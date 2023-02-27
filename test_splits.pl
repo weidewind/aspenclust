@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+
 use strict;
 use Aspens;
 use ProbsMutmap;
@@ -62,6 +63,13 @@ for (my $i = 0; $i < scalar @{$groups}; $i++){
         $groupnames{$names->[$i]} = $groups->[$i];
 }
 
+my ($addgroups, $addnames) = Groups::only_bloom();
+my %addgroupnames;
+for (my $i = 0; $i < scalar @{$addgroups}; $i++){
+        $addgroupnames{$addnames->[$i]} = $addgroups->[$i];
+}
+
+
 my $temp = $killist;
 my %killist;
 my @t = split(';', $temp);
@@ -86,6 +94,13 @@ if ($analysis eq "all" || $analysis eq "groups"){
 }
 if ($analysis eq "all" || $analysis eq "alleles"){
 	Aspens::alleles_stats({mutmap =>$mutmap, simnumber => $simnumber, sites => \@sites, verbose => $verbose, stattype => $stattype, norm =>$norm}); 
+}
+if ($analysis eq "all" || $analysis eq "ancestors"){
+	Aspens::ancestors_stats({mutmap =>$mutmap, simnumber => $simnumber, sites => \@sites, verbose => $verbose, stattype => $stattype, norm =>$norm}); 
+}
+if ($analysis eq "add_groups"){
+	Aspens::group_stats_batch({mutmap => $mutmap, shuffletype => "labelshuffler", simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose, groupnames => \%addgroupnames});
+	Aspens::group_stats_batch({mutmap => $mutmap, shuffletype => "siteshuffler",simnumber => $simnumber, stattype => $stattype, norm => $norm, verbose => $verbose, groupnames => \%addgroupnames});
 }
 
 my $timedone = clock();
