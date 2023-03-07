@@ -1,14 +1,11 @@
 #!/usr/bin/perl
-
 use strict;
+use Sampler qw(print_probs_for_pair_index sample_pheno_for_pair_index);
+use Parsers qw(parse_site2pheno);
+use Data::Dumper;
 use DistanceMap;
-use File::Spec;
-use Cwd qw(abs_path cwd getcwd);
-use lib getcwd(); # adds working directory to @INC
 use Getopt::ArgvFile;
 use Getopt::Long;
-use Data::Dumper;
-use Parsers qw(parse_pairs);
 
 my $protein = "toy";
 my $state = "nsyn";
@@ -18,7 +15,7 @@ my $verbose;
 my $fdr;
 my $fakenum;
 my $phenotype;
-my $pairsfile; #contains pairs of sites, one tab-delimited pair per line (e.g. 123	144\n)
+
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -29,24 +26,23 @@ GetOptions (
 		'fdr' => \$fdr,
 		'fakenum=i' => \$fakenum,
 		'phenotype=s' => \$phenotype,
-		'pairsfile=s' => \$pairsfile,
 );
 
 $| = 1;
 
 my $args = {protein => $protein, state => $state, bigtag => $bigtag, input => $input, fdr => $fdr, fakenum => $fakenum, phenotype => $phenotype};
-print Dumper $args;
-my $mutmap = DistanceMap->new($args);
+my $pheno_file = DistanceMap::get_site2pheno_filepath($args);
+my ($s2p, $phenotypes) = parse_site2pheno($pheno_file);
+print Dumper $s2p->[0..5];
 
-print STDOUT "DistanceMap created\n";
-
-if ($pairsfile){
-	my @pairs = parse_pairs($pairsfile);
-	# print Dumper (\@pairs);
-	$mutmap->all_nonsequential_distances(\@pairs);
+my @pairs = ([0,5],[1,2], [2,3],[3,4],[1,5]);
+print Dumper \@pairs;
+my $sampler = Sampler->new(\@pairs, $phenotypes, $s2p);
+print "probs for pair (1,2)\n";
+$sampler->print_probs_for_pair_index(1);
+for (my $i = 0; $i < 20; $i++){
+	my $ph = $sampler->sample_pheno_for_pair_index(1);
+	print $ph." "
 }
-else{$mutmap->all_nonsequential_distances();}
-
-
 
 

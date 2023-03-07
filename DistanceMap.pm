@@ -20,6 +20,7 @@ sub get_output_base {
 	my $args = shift;
 	my $output_base = File::Spec->catdir(getcwd(), "output", $args->{input}, $args->{bigtag}, $args->{state});
 	if ($args->{fdr}){$output_base = File::Spec->catdir($output_base, "fdr");}
+	if ($args->{phenotype}){$output_base = File::Spec->catdir($output_base, $args->{phenotype});}
 	return $output_base;
 }
 
@@ -27,8 +28,16 @@ sub get_input_base {
 	my $args = shift;
 	my $input_base = File::Spec->catdir(getcwd(), "data", $args->{input});
 	if ($args->{fdr}){$input_base = File::Spec->catdir($input_base, "fdr", $args->{protein});}
+	if ($args->{phenotype}){$input_base = File::Spec->catdir($input_base, $args->{phenotype});}
 	return $input_base;
 }
+
+sub get_site2pheno_filepath {
+	my $args = shift;
+	my $filepath = File::Spec->catdir(getcwd(), "data", $args->{input}, "min_RR_SR.site2pheno");
+	return $filepath;
+}
+
 
 sub new {
 		my ($class, $args) = @_;	
@@ -50,6 +59,7 @@ sub new {
 				static_treefile => $treefile,
 				static_state  => $args->{state},
 				static_fdr => $args->{fdr},
+				static_phenotype => $args->{phenotype},
 				static_fakenum => $args->{fakenum},
 		};
 		
@@ -72,8 +82,8 @@ sub new {
 sub global_pair_distances {
 	my $self = shift;
 	my @sites = @{$_[0]};
-	print "and now sites are ";
-	print Dumper \@sites;
+	# print "and now sites are ";
+	# print Dumper \@sites;
 	my $pair_counter = 0;
 	my $distance_counter = 0;
 	#print Dumper ($self->{static_nodes_with_sub});
@@ -87,10 +97,10 @@ sub global_pair_distances {
 				if (exists($self->{static_nodes_with_sub}{$ssite})){
 					my @snodes = @{$self->{static_nodes_with_sub}{$ssite}};
 					if (scalar @fnodes > 0 and scalar @snodes > 0){
-						print ("site1 $fsite site2 $ssite\n");
-						print (scalar @fnodes);
-						print ("\n");
-						print (scalar @snodes);
+						# print ("site1 $fsite site2 $ssite\n");
+						# print (scalar @fnodes);
+						# print ("\n");
+						# print (scalar @snodes);
 						foreach my $fnode (@fnodes){
 							foreach my $snode (@snodes){
 								$pair_counter++;
@@ -115,10 +125,10 @@ sub site_pair_all_distances {
 	if (exists($self->{static_nodes_with_sub}{$fsite}) & exists($self->{static_nodes_with_sub}{$ssite})){
 		my @fnodes = @{$self->{static_nodes_with_sub}{$fsite}};
 		my @snodes = @{$self->{static_nodes_with_sub}{$ssite}};
-		print ("site1 $fsite site2 $ssite\n");
-		print (scalar @fnodes);
-		print ("\n");
-		print (scalar @snodes);
+		# print ("site1 $fsite site2 $ssite\n");
+		# print (scalar @fnodes);
+		# print ("\n");
+		# print (scalar @snodes);
 		$pair_counter = (scalar @fnodes)*(scalar @snodes);
 		foreach my $fnode (@fnodes){
 			foreach my $snode (@snodes){

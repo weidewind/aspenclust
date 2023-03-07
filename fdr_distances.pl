@@ -14,6 +14,7 @@ use File::Path qw(make_path remove_tree);
 my $protein = "toy";
 my $state = "nsyn";
 my $bigtag = "test";
+my $phenotype;
 my $input;
 my $verbose;
 my $switch;
@@ -26,12 +27,13 @@ GetOptions (
 		'input=s' => \$input,
 		'verbose' => \$verbose,
 		'switch' => \$switch,
+		'phenotype=s' => \$phenotype,
 		'pairsfile=s' => \$pairsfile,
 );
 
 $| = 1;
 
-my $args = {protein => $protein, state => $state, bigtag => $bigtag, input => $input, fdr => 1};
+my $args = {protein => $protein, state => $state, bigtag => $bigtag, input => $input, fdr => 1, phenotype => $phenotype};
 my $folder = DistanceMap::get_input_base($args);
 make_path(DistanceMap::get_output_base($args));
 my $log = File::Spec->catfile(DistanceMap::get_output_base($args), "$protein.log");
@@ -116,6 +118,9 @@ sub mycomm {
 	my $command = $exports.$perlocation." test_distances.pl --input $input --protein $protein --state $state --bigtag $bigtag --fdr --fakenum $fakenum";
 	if ($pairsfile){
 		$command .= " --pairsfile $pairsfile";
+	}
+	if ($phenotype){
+		$command .= " --phenotype $phenotype";
 	}
 	return $command;
 	

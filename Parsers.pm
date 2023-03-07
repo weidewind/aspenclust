@@ -8,7 +8,7 @@ use List::Util qw(min max);
 use compare;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(parse_fasta read_xpar parse_site_pair_distances parse_likelihoods parse_likelihoods_csv parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods parse_splits) ; # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(parse_fasta read_xpar parse_site2pheno parse_pairs parse_site_pair_distances parse_likelihoods parse_likelihoods_csv parse_tree parse_likelihoods_as_fasta parse_fasta_as_likelihoods parse_splits) ; # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Phylo::IO;
 use Bio::SeqIO;
@@ -70,6 +70,45 @@ sub read_xpar{
 	close XPAR;
 	return (\%subs_on_node, \%nodes_with_sub);
 }
+
+
+## skips pairs where site1 > site2, so that *.site_pairs can be used as the pairsfile
+sub parse_pairs {
+	my $pairsfile = shift;
+	my @pairs;
+	open P, "<$pairsfile" or die "cannot open file with pairs $pairsfile $!";
+	my $header = <P>;
+	while (<P>){
+		my @sp = split(/\s+/);
+		if ($sp[0] < $sp[1]){
+			push @pairs, [$sp[0], $sp[1]];
+		}
+	}
+	close P;
+	return @pairs;
+}
+
+sub parse_site2pheno {
+	my $pheno_file = shift;
+	my @site2pheno;
+	open PHENO, "<$pheno_file" or die "cannot open site2pheno file $pheno_file\n";
+	my $header = <PHENO>;
+	my @phenotypes = split(/\t/,$header);
+	shift @phenotypes;
+	my $num_pheno = scalar @phenotypes;
+	while (<PHENO>){
+		my @str = split(/\t/);
+		my $site = shift @str;
+		my $num_pvalues = scalar @str;
+		if ($num_pheno != $num_pvalues){ die "Number of pvalues is not equal to the number of phenotypes for site $site! Number of pheno $num_pheno and number of pvalues $num_pvalues\n"};
+		for(my $i = 0; $i < scalar @phenotypes; $i++){
+			$site2pheno[$site]{$phenotypes[$i]} = $str[$i];
+		}
+	}
+	close PHENO;
+	return (\@site2pheno, \@phenotypes);
+}
+
 
 sub parse_site_pair_distances {
 	my $stat_file = shift;
