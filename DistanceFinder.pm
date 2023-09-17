@@ -56,6 +56,10 @@ $VERSION = 1.00; # Or higher
 	 	my $mutmap = shift;
     	my $node = shift;
 		my $other_node = shift;
+		## debug 
+		# print ($node->get_name);
+		# print ($other_node->get_name);
+		##
 		my $date = shift;
     	if  (exists $mutmap ->{static_distance_hash}{$node}{$other_node}){
     		return $mutmap ->{static_distance_hash}{$node}{$other_node};

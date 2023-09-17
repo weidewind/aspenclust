@@ -1,0 +1,14 @@
+$VAR1 = {
+          'bigtag' => 'disttest',
+          'protein' => '9drugs',
+          'fakenum' => undef,
+          'fdr' => undef,
+          'input' => 'mtub_no_domains_210423_epistat',
+          'phenotype' => undef,
+          'state' => 'nsyn'
+        };
+DistanceMap created
+test self
+ 1 
+not an fdr simulation
+statfile /export/home/popova/workspace/aspenclust/data/mtub_no_domains_210423_epistat/9drugs.stat.ident spfile /export/home/popova/workspace/aspenclust/data/mtub_no_domains_210423_epistat/9drugs.site_pairs output /export/home/popova/workspace/aspenclust/output/mtub_no_domains_210423_epistat/disttest/nsyn/9drugs_all_nonsequential

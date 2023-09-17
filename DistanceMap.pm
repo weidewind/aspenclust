@@ -125,10 +125,12 @@ sub site_pair_all_distances {
 	if (exists($self->{static_nodes_with_sub}{$fsite}) & exists($self->{static_nodes_with_sub}{$ssite})){
 		my @fnodes = @{$self->{static_nodes_with_sub}{$fsite}};
 		my @snodes = @{$self->{static_nodes_with_sub}{$ssite}};
+		## debug
 		# print ("site1 $fsite site2 $ssite\n");
 		# print (scalar @fnodes);
 		# print ("\n");
 		# print (scalar @snodes);
+		##
 		$pair_counter = (scalar @fnodes)*(scalar @snodes);
 		foreach my $fnode (@fnodes){
 			foreach my $snode (@snodes){
@@ -147,6 +149,10 @@ sub all_nonsequential_distances {
 	my $protein = $self->{static_protein};
 	my $input_base = $self->{static_input_base};
 	my $spfile = File::Spec->catfile($input_base, $protein.".site_pairs");
+	
+	## debug 
+	# print Dumper($self->{static_nodes_with_sub});
+	##
 
 	my $statfile;
 	my $output;
